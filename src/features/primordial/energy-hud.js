@@ -6,15 +6,9 @@ import { MODULE_ID } from "../../settings.js";
  * 
  * Ein kleines, schwebendes Icon unten links im Bildschirm.
  * Jeder Spieler sieht NUR sein eigenes Icon.
+ * GM sieht das Icon des aktuell ausgewählten Tokens (zum Testen).
  * Kein Prozentwert — nur der Füllstand des Icons.
  * Bei 100%: dezentes Pulsieren/Leuchten.
- * 
- * Icons pro Charakter:
- *   Remiel  — D20 (Hexagon)     — #487d9d
- *   Elantir — Schild             — #ffc800
- *   Theia   — Mondsichel          — #47eaff
- *   Pyraxis — Flamme             — #ff4400
- *   Vaelorin — Dolch             — #5f009e
  */
 
 const ICON_CONFIGS = {
@@ -22,26 +16,26 @@ const ICON_CONFIGS = {
     color: "#487d9d",
     path: "M50,8 L92,30 L92,70 L50,92 L8,70 L8,30 Z",
     details: [
-      '<line x1="50" y1="8" x2="50" y2="92" stroke-width="0.8" opacity="0.3"/>',
-      '<line x1="8" y1="30" x2="92" y2="70" stroke-width="0.8" opacity="0.3"/>',
-      '<line x1="92" y1="30" x2="8" y2="70" stroke-width="0.8" opacity="0.3"/>'
+      '<line x1="50" y1="8" x2="50" y2="92" stroke="STROKE" stroke-width="0.8" opacity="0.3"/>',
+      '<line x1="8" y1="30" x2="92" y2="70" stroke="STROKE" stroke-width="0.8" opacity="0.3"/>',
+      '<line x1="92" y1="30" x2="8" y2="70" stroke="STROKE" stroke-width="0.8" opacity="0.3"/>'
     ]
   },
   elantir: {
     color: "#ffc800",
     path: "M50,5 L90,22 L90,55 Q90,80 50,97 Q10,80 10,55 L10,22 Z",
     details: [
-      '<line x1="50" y1="22" x2="50" y2="82" stroke-width="0.8" opacity="0.3"/>',
-      '<line x1="28" y1="38" x2="72" y2="38" stroke-width="0.8" opacity="0.3"/>'
+      '<line x1="50" y1="22" x2="50" y2="82" stroke="STROKE" stroke-width="0.8" opacity="0.3"/>',
+      '<line x1="28" y1="38" x2="72" y2="38" stroke="STROKE" stroke-width="0.8" opacity="0.3"/>'
     ]
   },
   theia: {
     color: "#47eaff",
     path: "M68,8 Q18,8 13,50 Q8,92 58,97 Q33,82 33,50 Q33,18 68,8 Z",
     details: [
-      '<circle cx="55" cy="32" r="2" opacity="0.4"/>',
-      '<circle cx="45" cy="68" r="1.5" opacity="0.3"/>',
-      '<circle cx="62" cy="55" r="1" opacity="0.3"/>'
+      '<circle cx="55" cy="32" r="2" fill="STROKE" opacity="0.4"/>',
+      '<circle cx="45" cy="68" r="1.5" fill="STROKE" opacity="0.3"/>',
+      '<circle cx="62" cy="55" r="1" fill="STROKE" opacity="0.3"/>'
     ]
   },
   pyraxis: {
@@ -58,25 +52,21 @@ const ICON_CONFIGS = {
 
 let hudElement = null;
 let currentCharKey = null;
+let currentActorId = null;
 
 /**
- * Bestimmt welcher Charakter zum aktuell eingeloggten Spieler gehört.
- * Checkt die DSR-EX Flags auf den Items des Actors.
+ * Bestimmt welcher Charakter-Key zum Actor passt.
  */
-function getPlayerCharacterKey() {
-  const user = game.user;
-  if (!user || user.isGM) return null;
-
-  const actor = user.character;
+function getCharKeyForActor(actor) {
   if (!actor) return null;
 
-  // Prüfe ob der Actor ein Primordial Attack Item hat
+  // Prüfe DSR-EX Flags auf Items
   for (const item of actor.items) {
     const charFlag = item.flags?.["DSR-EX"]?.character;
     if (charFlag) return charFlag.toLowerCase();
   }
 
-  // Fallback: Prüfe Actor-Name
+  // Fallback: Actor-Name
   const name = actor.name?.toLowerCase() ?? "";
   for (const key of Object.keys(ICON_CONFIGS)) {
     if (name.includes(key)) return key;
@@ -86,65 +76,75 @@ function getPlayerCharacterKey() {
 }
 
 /**
- * Gibt den Actor des aktuell eingeloggten Spielers zurück.
+ * Gibt den relevanten Actor zurück.
+ * Spieler: Ihr zugewiesener Character.
+ * GM: Der aktuell ausgewählte Token (zum Testen).
  */
-function getPlayerActor() {
-  const user = game.user;
-  if (!user) return null;
-
-  // GM sieht kein HUD (der sieht alles via Whisper)
-  if (user.isGM) return null;
-
-  return user.character ?? null;
+function getRelevantActor() {
+  if (game.user.isGM) {
+    // GM: Ausgewählter Token
+    const controlled = canvas.tokens?.controlled?.[0];
+    return controlled?.actor ?? null;
+  }
+  return game.user.character ?? null;
 }
 
-/**
- * Erstellt das SVG für ein Primordial Icon.
- */
 function buildIconSVG(charKey, fillPercent) {
   const config = ICON_CONFIGS[charKey];
   if (!config) return "";
 
-  const gradientId = `dsr-ex-fill-${charKey}`;
+  const gradId = `dsr-ex-fill-${charKey}`;
   const frac = Math.max(0, Math.min(1, fillPercent / 100));
 
   const detailLines = config.details
-    .map(d => d.replace(/stroke-width/g, `stroke="${config.color}" stroke-width`))
+    .map(d => d.replaceAll("STROKE", config.color))
     .join("\n    ");
 
   return `<svg class="dsr-ex-energy-icon" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <linearGradient id="${gradientId}" x1="0" y1="1" x2="0" y2="0">
+    <linearGradient id="${gradId}" x1="0" y1="1" x2="0" y2="0">
       <stop offset="0%" stop-color="${config.color}"/>
       <stop offset="${frac * 100}%" stop-color="${config.color}"/>
-      <stop offset="${frac * 100}%" stop-color="transparent"/>
-      <stop offset="100%" stop-color="transparent"/>
+      <stop offset="${frac * 100}%" stop-color="${config.color}" stop-opacity="0.1"/>
+      <stop offset="100%" stop-color="${config.color}" stop-opacity="0.1"/>
     </linearGradient>
   </defs>
-  <path d="${config.path}" fill="url(#${gradientId})" stroke="${config.color}" stroke-width="2.5"/>
+  <path d="${config.path}" fill="url(#${gradId})" stroke="${config.color}" stroke-width="2.5"/>
   ${detailLines}
 </svg>`;
 }
 
-/**
- * Updated das HUD mit dem aktuellen Energy-Wert.
- */
 function updateHUD() {
-  if (!hudElement || !currentCharKey) return;
+  if (!hudElement) return;
 
-  const actor = getPlayerActor();
-  if (!actor) return;
+  const actor = getRelevantActor();
+  if (!actor) {
+    hudElement.classList.add("hidden");
+    return;
+  }
+
+  const charKey = getCharKeyForActor(actor);
+  if (!charKey) {
+    hudElement.classList.add("hidden");
+    return;
+  }
+
+  // Wenn sich der Charakter geändert hat (GM wechselt Token), neu rendern
+  if (charKey !== currentCharKey || actor.id !== currentActorId) {
+    currentCharKey = charKey;
+    currentActorId = actor.id;
+  }
+
+  hudElement.classList.remove("hidden");
 
   const energy = getEnergy(actor);
   const max = game.settings.get(MODULE_ID, "maxEnergy");
   const percent = (energy / max) * 100;
 
-  // SVG updaten
   const svgContainer = hudElement.querySelector(".dsr-ex-icon-container");
   if (svgContainer) {
     svgContainer.innerHTML = buildIconSVG(currentCharKey, percent);
 
-    // Glow-Klasse
     const svg = svgContainer.querySelector("svg");
     if (svg) {
       const config = ICON_CONFIGS[currentCharKey];
@@ -159,14 +159,8 @@ function updateHUD() {
   }
 }
 
-/**
- * Erstellt das HUD-Element und fügt es in den DOM ein.
- */
 function createHUD() {
   if (hudElement) hudElement.remove();
-
-  currentCharKey = getPlayerCharacterKey();
-  if (!currentCharKey) return; // Kein Charakter = kein HUD
 
   hudElement = document.createElement("div");
   hudElement.classList.add("dsr-ex-energy-hud");
@@ -174,56 +168,44 @@ function createHUD() {
   document.body.appendChild(hudElement);
 
   updateHUD();
+  console.log("DSR-EX | Energy HUD erstellt");
 }
 
 /**
- * Registriert die HUD Hooks.
+ * Registriert die HUD-Hooks. Wird aus dem ready-Hook aufgerufen.
  */
 export function registerEnergyHUD() {
-  // HUD erstellen wenn ein Spieler bereit ist
-  Hooks.on("ready", () => {
-    // Kurze Verzögerung, damit alle Actors geladen sind
-    setTimeout(createHUD, 2000);
-  });
+  // HUD direkt erstellen (wir SIND bereits im ready-Hook)
+  setTimeout(createHUD, 1000);
 
   // Update wenn sich Actor-Flags ändern
-  Hooks.on("updateActor", (actor, changes) => {
+  Hooks.on("updateActor", (actor) => {
     if (!hudElement) return;
-
-    // Prüfe ob sich die Primordial Energy geändert hat
-    const flagChange = changes?.flags?.["DSR-EX"]?.primordialEnergy;
-    if (flagChange !== undefined) {
-      const playerActor = getPlayerActor();
-      if (playerActor && actor.id === playerActor.id) {
-        updateHUD();
-      }
+    const relevant = getRelevantActor();
+    if (relevant && actor.id === relevant.id) {
+      updateHUD();
     }
   });
 
-  // HUD zeigen/verstecken bei Combat Start/Ende
-  Hooks.on("createCombat", () => {
-    if (hudElement) hudElement.classList.remove("hidden");
+  // GM: Update wenn Token-Auswahl sich ändert
+  Hooks.on("controlToken", () => {
+    if (game.user.isGM) updateHUD();
   });
 
-  Hooks.on("deleteCombat", () => {
-    // HUD bleibt sichtbar, aber updated sich (Energy nach Decay)
-    updateHUD();
-  });
+  // HUD bei Combat-Events updaten
+  Hooks.on("createCombat", () => updateHUD());
+  Hooks.on("deleteCombat", () => updateHUD());
 
-  // HUD neu erstellen wenn der Spieler seinen Charakter wechselt
-  Hooks.on("updateUser", (user, changes) => {
-    if (user.id === game.user.id && changes.character !== undefined) {
-      createHUD();
+  // Spieler wechselt Character
+  Hooks.on("updateUser", (user) => {
+    if (user.id === game.user.id) {
+      setTimeout(createHUD, 500);
     }
   });
 
   console.log("DSR-EX | Energy HUD registriert");
 }
 
-/**
- * Für GM: Manuelles Update des HUDs aller Spieler erzwingen.
- * (Normalerweise nicht nötig, da updateActor-Hook automatisch feuert)
- */
 export function forceHUDUpdate() {
   updateHUD();
 }
