@@ -5,25 +5,70 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./ba
  * 
  * "AAAAAAAAAH!"
  * Song: Never Surrender — Combichrist
- * 
- * Effekt: Der Splitter von Kossuth entfesselt sich vollständig.
- * Feuerflügel, glühendes Loch in der Brust, totaler Kontrollverlust.
- * 
- * - ALLE Kreaturen im AOE (inkl. Verbündete!) nehmen Fire Damage
- * - Pyraxis erhält Temporary HP (die Wut schützt ihn)
- * 
- * Damage Formula: 6d8 Fire (AOE, keine Unterscheidung Freund/Feind)
- * Temp HP: 2d8 + CON Mod auf Pyraxis
  */
 
 const SPELL_NAME = "Primordial Rage";
 const DAMAGE_FORMULA = "6d8";
 const SELF_TEMP_HP = "2d8 + @abilities.con.mod";
 
-export function registerPrimordialRage() {
-  registerPrimordialAttack(SPELL_NAME, async ({ workflow, actor, item, targets }) => {
+const CUT_IN_CONFIG = {
+  groupId: "",
+  img: "assets/CharacterPortraits/CinematicPortraits/Pyraxis_CutinV2.png",
+  theme: "slash",
+  customDuration: 4,
+  hideBackground: false,
+  localOnly: false,
+  screenPosX: 50,
+  screenPos: 50,
+  charScale: 1.2,
+  charOffsetX: 100,
+  charOffsetY: 100,
+  charRotation: 10,
+  charMirror: false,
+  text: "Primordial Attack",
+  hideMainText: false,
+  mainFontSize: 4,
+  mainOffsetX: 0,
+  mainOffsetY: 0,
+  subText: "Primordial Rage",
+  hideSubText: false,
+  subFontSize: 1,
+  subOffsetX: 0,
+  subOffsetY: 0,
+  fontFamily: "Modesto Condensed",
+  fontBold: true,
+  fontItalic: false,
+  subFontFamily: "Modesto Condensed",
+  subFontBold: true,
+  subFontItalic: false,
+  mainTextColor: "#ffffff",
+  subTextColor: "#000000",
+  color: "#ff4400",               // Pyraxis: Orange-Rot
+  borderWidth: 0,
+  borderColor: "#ffffff",
+  charShadowColor: "#000000",
+  hideCharShadow: false,
+  shakeIntensity: 4,
+  dimIntensity: 0,
+  soundList: {
+    "0": "assets/AudioAssets/CutinAudio/Pyraxis_PrimordialVoice.m4a"  // TODO: Pfad anpassen
+  },
+  sfxList: {
+    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
+  },
+  soundVolume: 80,
+  sfxVolume: 80,
+  keepAudioPlaying: true,
+  audioOnly: false
+};
 
-    // Fire Damage — trifft ALLE targets ohne Unterscheidung
+export function registerPrimordialRage() {
+  registerPrimordialAttack({
+    name: SPELL_NAME,
+    cutIn: CUT_IN_CONFIG,
+    cutInDelay: 5000
+  }, async ({ workflow, actor, item, targets }) => {
+
     const { total: damageTotal } = await rollDamage({
       actor,
       formula: DAMAGE_FORMULA,
@@ -34,12 +79,9 @@ export function registerPrimordialRage() {
       await applyDamageToTargets(targets, damageTotal);
     }
 
-    // Temp HP für Pyraxis selbst
     const rollData = actor.getRollData?.() ?? {};
     const tempRoll = await new Roll(SELF_TEMP_HP, rollData).evaluate();
     const tempHp = Math.max(0, tempRoll.total);
-
-    // Temp HP auf Actor setzen
     await actor.update({ "system.attributes.hp.temp": tempHp });
 
     await tempRoll.toMessage({

@@ -4,18 +4,30 @@ import { MODULE_ID } from "../../../settings.js";
 /**
  * Shared base für alle Primordial Attacks.
  * 
- * Registriert einen midi-qol Hook, der:
- * 1. Auf den Item-Namen matcht
- * 2. Prüft ob Energy voll ist
- * 3. Energy konsumiert
- * 4. Die Attack-Logik ausführt
+ * Flow:
+ * 1. midi-qol Hook feuert
+ * 2. Item-Name matcht → Energy Check
+ * 3. Energy < 100 → Abbruch mit Warnung
+ * 4. Energy = 100 → Energy konsumieren
+ * 5. Cinematic Cut-In abspielen (falls konfiguriert)
+ * 6. Warten bis Cut-In fertig (~5 Sek.)
+ * 7. Attack-Logik ausführen (Damage, Heal, etc.)
  * 
  * Usage:
- *   registerPrimordialAttack("Primordial Chaos", async ({ workflow, actor, item, targets }) => {
+ *   registerPrimordialAttack({
+ *     name: "Primordial Chaos",
+ *     cutIn: { ... },         // Cinematic Cut-In Config (optional)
+ *     cutInDelay: 5000,       // ms Wartezeit nach Cut-In (default: 5000)
+ *   }, async ({ workflow, actor, item, targets }) => {
  *     // Attack-Logik hier
  *   });
  */
-export function registerPrimordialAttack(spellName, executeAttack) {
+export function registerPrimordialAttack(config, executeAttack) {
+  // Config kann ein String (nur Name) oder ein Objekt sein
+  const spellName = typeof config === "string" ? config : config.name;
+  const cutInConfig = typeof config === "object" ? config.cutIn : null;
+  const cutInDelay = typeof config === "object" ? (config.cutInDelay ?? 5000) : 5000;
+
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
     try {
       const item = workflow?.item;
@@ -23,7 +35,7 @@ export function registerPrimordialAttack(spellName, executeAttack) {
       if (!item || !actor) return;
       if ((item.name ?? "").trim() !== spellName) return;
 
-      // Energy Check
+      // Energy Check — bei < 100 passiert NICHTS (kein Roll, kein Chat)
       if (!isReady(actor)) {
         const current = getEnergy(actor);
         const max = game.settings.get(MODULE_ID, "maxEnergy");
@@ -47,7 +59,14 @@ export function registerPrimordialAttack(spellName, executeAttack) {
         ].join("\n")
       );
 
-      // Attack-Logik ausführen
+      // ─── Cinematic Cut-In ─────────────────────────────────────────
+      if (cutInConfig) {
+        await playCutIn(cutInConfig);
+        // Warten bis der Cut-In fertig ist
+        await sleep(cutInDelay);
+      }
+
+      // ─── Attack-Logik ausführen ───────────────────────────────────
       await executeAttack({ workflow, actor, item, targets });
 
     } catch (err) {
@@ -55,7 +74,36 @@ export function registerPrimordialAttack(spellName, executeAttack) {
     }
   });
 
-  console.log(`DSR-EX | Primordial Attack registriert: ${spellName}`);
+  console.log(`DSR-EX | Primordial Attack registriert: ${spellName}${cutInConfig ? " (mit Cut-In)" : ""}`);
+}
+
+// ─── Cinematic Cut-In ───────────────────────────────────────────────────────
+
+/**
+ * Spielt einen Cinematic Cut-In ab.
+ * Nutzt die API von "Cinematic Cut-Ins" Modul.
+ * 
+ * @param {Object} config — Das komplette Config-Objekt für die Cut-In API.
+ */
+async function playCutIn(config) {
+  try {
+    const cutInModule = game.modules.get("cinematic-cut-ins");
+    if (!cutInModule?.api?.play) {
+      console.warn("DSR-EX | Cinematic Cut-Ins Modul nicht gefunden oder API nicht verfügbar.");
+      return;
+    }
+    await cutInModule.api.play(config);
+    console.log("DSR-EX | Cut-In abgespielt.");
+  } catch (err) {
+    console.error("DSR-EX | Cut-In Fehler:", err);
+  }
+}
+
+/**
+ * Wartet eine bestimmte Anzahl Millisekunden.
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────

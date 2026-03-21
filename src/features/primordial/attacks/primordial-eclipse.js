@@ -5,15 +5,6 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets, applyHealTo
  * 
  * "I won't hold back anymore."
  * Song: A Stranger I Remain — Free Dominguez
- * 
- * Effekt: Luna manifestiert sich als geisterhafter Mondkörper hinter Theia.
- * Aasimar-Flügel breiten sich aus. Theia und Luna verschmelzen.
- * 
- * - Feinde: Radiant + Psychic Damage
- * - Verbündete: Heilung
- * 
- * Damage Formula: 3d8 Radiant + 2d8 Psychic
- * Heal Formula: 3d8 + WIS Mod
  */
 
 const SPELL_NAME = "Primordial Eclipse";
@@ -21,31 +12,80 @@ const DAMAGE_RADIANT = "3d8";
 const DAMAGE_PSYCHIC = "2d8";
 const HEAL_FORMULA = "3d8 + @abilities.wis.mod";
 
-export function registerPrimordialEclipse() {
-  registerPrimordialAttack(SPELL_NAME, async ({ workflow, actor, item, targets }) => {
+const CUT_IN_CONFIG = {
+  groupId: "",
+  img: "assets/CharacterPortraits/CinematicPortraits/Theia_Cutin.png",
+  theme: "slash",
+  customDuration: 4,
+  hideBackground: false,
+  localOnly: false,
+  screenPosX: 50,
+  screenPos: 50,
+  charScale: 1.2,
+  charOffsetX: 100,
+  charOffsetY: 100,
+  charRotation: 10,
+  charMirror: false,
+  text: "Primordial Attack",
+  hideMainText: false,
+  mainFontSize: 4,
+  mainOffsetX: 0,
+  mainOffsetY: 0,
+  subText: "Primordial Eclipse",
+  hideSubText: false,
+  subFontSize: 1,
+  subOffsetX: 0,
+  subOffsetY: 0,
+  fontFamily: "Modesto Condensed",
+  fontBold: true,
+  fontItalic: false,
+  subFontFamily: "Modesto Condensed",
+  subFontBold: true,
+  subFontItalic: false,
+  mainTextColor: "#ffffff",
+  subTextColor: "#000000",
+  color: "#88aaff",               // Theia: Eisblau
+  borderWidth: 0,
+  borderColor: "#ffffff",
+  charShadowColor: "#000000",
+  hideCharShadow: false,
+  shakeIntensity: 4,
+  dimIntensity: 0,
+  soundList: {
+    "0": "assets/AudioAssets/CutinAudio/Theia_PrimordialVoice.m4a"  // TODO: Pfad anpassen
+  },
+  sfxList: {
+    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
+  },
+  soundVolume: 80,
+  sfxVolume: 80,
+  keepAudioPlaying: true,
+  audioOnly: false
+};
 
-    // Radiant Damage
+export function registerPrimordialEclipse() {
+  registerPrimordialAttack({
+    name: SPELL_NAME,
+    cutIn: CUT_IN_CONFIG,
+    cutInDelay: 5000
+  }, async ({ workflow, actor, item, targets }) => {
+
     const { total: radiantTotal } = await rollDamage({
-      actor,
-      formula: DAMAGE_RADIANT,
+      actor, formula: DAMAGE_RADIANT,
       flavor: `${SPELL_NAME} — Radiant Damage`
     });
 
-    // Psychic Damage
     const { total: psychicTotal } = await rollDamage({
-      actor,
-      formula: DAMAGE_PSYCHIC,
+      actor, formula: DAMAGE_PSYCHIC,
       flavor: `${SPELL_NAME} — Psychic Damage`
     });
 
     const totalDamage = radiantTotal + psychicTotal;
 
-    // Feinde: Damage
     if (targets.length) {
       await applyDamageToTargets(targets, totalDamage);
     }
 
-    // Heal Roll (für Verbündete — manuell vom DM zuzuweisen)
     const rollData = actor.getRollData?.() ?? {};
     const healRoll = await new Roll(HEAL_FORMULA, rollData).evaluate();
     const healTotal = Math.max(0, healRoll.total);
@@ -63,10 +103,9 @@ export function registerPrimordialEclipse() {
         <div style="color:#aaa; margin-top:4px; font-style:italic;">
           Mondlicht bricht durch die Dunkelheit. Hinter Theia erhebt sich Luna —
           nicht als Erinnerung, sondern als Wesen. Geflügelt, leuchtend, schreiend.
-          Sie hält nicht mehr zurück.
         </div>
         <div style="margin-top:8px; color:#aaccff;">
-          Radiant Damage: ${radiantTotal} | Psychic Damage: ${psychicTotal}
+          Radiant: ${radiantTotal} | Psychic: ${psychicTotal}
         </div>
         <div style="color:#88ff88;">
           Heilung (Verbündete): ${healTotal}

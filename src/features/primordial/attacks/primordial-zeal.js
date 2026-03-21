@@ -6,30 +6,74 @@ import { applyEffectViaSocket } from "../../../utils/socket.js";
  * 
  * "Quench the flames with blood."
  * Song: Tenebre Rosso Sangue — Keygen Church
- * 
- * Effekt: Göttliches Feuer, nicht von Tyr — von Elantirs eigenem Glauben.
- * Die Kathedrale wird zum Schlachtfeld. Glaube als physische Gewalt.
- * 
- * - Feinde: Radiant Damage
- * - Verbündete: AC-Buff (Schutzaura) + Temp HP
- * 
- * Damage Formula: 5d8 Radiant
- * Buff: +2 AC für 1 Minute, 1d8 + CHA Mod Temp HP
  */
 
 const SPELL_NAME = "Primordial Zeal";
 const DAMAGE_FORMULA = "5d8";
 const TEMP_HP_ALLIES = "1d8 + @abilities.cha.mod";
 const BUFF_AC = 2;
-const BUFF_DURATION = 60; // Sekunden
+const BUFF_DURATION = 60;
+
+const CUT_IN_CONFIG = {
+  groupId: "",
+  img: "assets/CharacterPortraits/CinematicPortraits/Elantir_Cutin.png",
+  theme: "slash",
+  customDuration: 4,
+  hideBackground: false,
+  localOnly: false,
+  screenPosX: 50,
+  screenPos: 50,
+  charScale: 1.2,
+  charOffsetX: 100,
+  charOffsetY: 100,
+  charRotation: 10,
+  charMirror: false,
+  text: "Primordial Attack",
+  hideMainText: false,
+  mainFontSize: 4,
+  mainOffsetX: 0,
+  mainOffsetY: 0,
+  subText: "Primordial Zeal",
+  hideSubText: false,
+  subFontSize: 1,
+  subOffsetX: 0,
+  subOffsetY: 0,
+  fontFamily: "Modesto Condensed",
+  fontBold: true,
+  fontItalic: false,
+  subFontFamily: "Modesto Condensed",
+  subFontBold: true,
+  subFontItalic: false,
+  mainTextColor: "#ffffff",
+  subTextColor: "#000000",
+  color: "#ffcc00",               // Elantir: Gold
+  borderWidth: 0,
+  borderColor: "#ffffff",
+  charShadowColor: "#000000",
+  hideCharShadow: false,
+  shakeIntensity: 4,
+  dimIntensity: 0,
+  soundList: {
+    "0": "assets/AudioAssets/CutinAudio/Elantir_PrimordialVoice.m4a"  // TODO: Pfad anpassen
+  },
+  sfxList: {
+    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
+  },
+  soundVolume: 80,
+  sfxVolume: 80,
+  keepAudioPlaying: true,
+  audioOnly: false
+};
 
 export function registerPrimordialZeal() {
-  registerPrimordialAttack(SPELL_NAME, async ({ workflow, actor, item, targets }) => {
+  registerPrimordialAttack({
+    name: SPELL_NAME,
+    cutIn: CUT_IN_CONFIG,
+    cutInDelay: 5000
+  }, async ({ workflow, actor, item, targets }) => {
 
-    // Radiant Damage auf Feinde
     const { total: damageTotal } = await rollDamage({
-      actor,
-      formula: DAMAGE_FORMULA,
+      actor, formula: DAMAGE_FORMULA,
       flavor: `${SPELL_NAME} — Radiant Damage`
     });
 
@@ -37,7 +81,6 @@ export function registerPrimordialZeal() {
       await applyDamageToTargets(targets, damageTotal);
     }
 
-    // Temp HP Roll (für Verbündete — Chat-Info)
     const rollData = actor.getRollData?.() ?? {};
     const tempRoll = await new Roll(TEMP_HP_ALLIES, rollData).evaluate();
     const tempHp = Math.max(0, tempRoll.total);
@@ -47,8 +90,6 @@ export function registerPrimordialZeal() {
       flavor: `DSR-EX | ${SPELL_NAME} — Temp HP für Verbündete`
     });
 
-    // AC-Buff als Active Effect auf den Caster selbst
-    // (In-game manuell auf andere Verbündete kopierbar)
     const buffEffect = {
       name: "Primordial Zeal — Schutzaura",
       img: item.img ?? "icons/magic/holy/barrier-shield-winged-cross.webp",

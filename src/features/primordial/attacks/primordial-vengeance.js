@@ -5,50 +5,88 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./ba
  * 
  * "Time to reap."
  * Song: Crimson Cloud — Jeff Rona
- * 
- * Effekt: Die Schatten schlagen zurück. Vaelorin tritt aus der Dunkelheit
- * als etwas, das keine Schatten mehr wirft — sondern Schatten IST.
- * Violettes Feuer, brennender Dolch, reine Vergeltung.
- * 
- * - Single Target: Massiver Psychic + Necrotic Burst
- * - Bonus: Vaelorin wird für 1 Runde Invisible (Schatten verschlucken ihn)
- * 
- * Damage Formula: 4d10 Psychic + 3d8 Necrotic (Single Target)
  */
 
 const SPELL_NAME = "Primordial Vengeance";
 const DAMAGE_PSYCHIC = "4d10";
 const DAMAGE_NECROTIC = "3d8";
 
-export function registerPrimordialVengeance() {
-  registerPrimordialAttack(SPELL_NAME, async ({ workflow, actor, item, targets }) => {
+const CUT_IN_CONFIG = {
+  groupId: "",
+  img: "assets/CharacterPortraits/CinematicPortraits/Vaelorin_Cutin.png",
+  theme: "slash",
+  customDuration: 4,
+  hideBackground: false,
+  localOnly: false,
+  screenPosX: 50,
+  screenPos: 50,
+  charScale: 1.2,
+  charOffsetX: 100,
+  charOffsetY: 100,
+  charRotation: 10,
+  charMirror: false,
+  text: "Primordial Attack",
+  hideMainText: false,
+  mainFontSize: 4,
+  mainOffsetX: 0,
+  mainOffsetY: 0,
+  subText: "Primordial Vengeance",
+  hideSubText: false,
+  subFontSize: 1,
+  subOffsetX: 0,
+  subOffsetY: 0,
+  fontFamily: "Modesto Condensed",
+  fontBold: true,
+  fontItalic: false,
+  subFontFamily: "Modesto Condensed",
+  subFontBold: true,
+  subFontItalic: false,
+  mainTextColor: "#ffffff",
+  subTextColor: "#000000",
+  color: "#aa44ff",               // Vaelorin: Violett
+  borderWidth: 0,
+  borderColor: "#ffffff",
+  charShadowColor: "#000000",
+  hideCharShadow: false,
+  shakeIntensity: 4,
+  dimIntensity: 0,
+  soundList: {
+    "0": "assets/AudioAssets/CutinAudio/Vaelorin_PrimordialVoice.m4a"  // TODO: Pfad anpassen
+  },
+  sfxList: {
+    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
+  },
+  soundVolume: 80,
+  sfxVolume: 80,
+  keepAudioPlaying: true,
+  audioOnly: false
+};
 
-    // Single Target — nur das erste Ziel
+export function registerPrimordialVengeance() {
+  registerPrimordialAttack({
+    name: SPELL_NAME,
+    cutIn: CUT_IN_CONFIG,
+    cutInDelay: 5000
+  }, async ({ workflow, actor, item, targets }) => {
+
     const target = targets[0];
 
-    // Psychic Damage
     const { total: psychicTotal } = await rollDamage({
-      actor,
-      formula: DAMAGE_PSYCHIC,
+      actor, formula: DAMAGE_PSYCHIC,
       flavor: `${SPELL_NAME} — Psychic Damage`
     });
 
-    // Necrotic Damage
     const { total: necroticTotal } = await rollDamage({
-      actor,
-      formula: DAMAGE_NECROTIC,
+      actor, formula: DAMAGE_NECROTIC,
       flavor: `${SPELL_NAME} — Necrotic Damage`
     });
 
     const totalDamage = psychicTotal + necroticTotal;
 
-    // Damage anwenden (nur erstes Target)
     if (target) {
       await applyDamageToTargets([target], totalDamage);
     }
 
-    // Invisibility Hinweis (manuell zu setzen oder via Condition)
-    // Foundry v13: Invisible Condition als StatusEffect
     try {
       const invisEffect = {
         name: "Primordial Vengeance — Schatten",
@@ -58,7 +96,6 @@ export function registerPrimordialVengeance() {
         flags: { "DSR-EX": { primordialVengeanceShadow: true } },
         statuses: ["invisible"]
       };
-
       const { applyEffectViaSocket } = await import("../../../utils/socket.js");
       await applyEffectViaSocket(actor, invisEffect);
     } catch (err) {
@@ -73,7 +110,6 @@ export function registerPrimordialVengeance() {
         <div style="color:#aaa; margin-top:4px; font-style:italic;">
           Die Schatten gehorchen nicht mehr der Dunkelheit. Sie gehorchen ihm.
           Violettes Feuer frisst sich durch die Luft. Der Dolch trifft, bevor man ihn sieht.
-          Vaelorin verschwindet — und was bleibt, ist nur der Schmerz.
         </div>
         <div style="margin-top:8px; color:#cc88ff;">
           ${target ? `Ziel: ${target.name}` : "Kein Ziel"}
