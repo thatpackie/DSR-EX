@@ -1,0 +1,22 @@
+{
+  "DSR-EX.ModuleName": "DSR-EX: Primordial Attacks",
+  "DSR-EX.ModuleDescription": "Primordial Attack System für Die schwarze Renaissance",
+
+  "DSR-EX.Settings.Enabled": "DSR-EX: Primordial System aktiv",
+  "DSR-EX.Settings.PassiveCharge": "DSR-EX: Passive Charge pro Runde",
+  "DSR-EX.Settings.DecayAmount": "DSR-EX: Decay nach Kampfende",
+  "DSR-EX.Settings.MaxEnergy": "DSR-EX: Maximale Primordial Energy",
+  "DSR-EX.Settings.GmWhisper": "DSR-EX: Infos an GM als Whisper",
+
+  "DSR-EX.Energy.Charged": "Primordial Energy +{amount} → {total}",
+  "DSR-EX.Energy.Decayed": "Primordial Energy Decay: -{amount} → {total}",
+  "DSR-EX.Energy.Full": "⚡ PRIMORDIAL BEREIT ⚡",
+  "DSR-EX.Energy.Consumed": "Primordial Energy verbraucht: 100 → 0",
+
+  "DSR-EX.Attack.NotReady": "Primordial Energy nicht voll ({current}/100).",
+  "DSR-EX.Attack.PrimordialChaos": "Primordial Chaos",
+  "DSR-EX.Attack.PrimordialRage": "Primordial Rage",
+  "DSR-EX.Attack.PrimordialEclipse": "Primordial Eclipse",
+  "DSR-EX.Attack.PrimordialZeal": "Primordial Zeal",
+  "DSR-EX.Attack.PrimordialVengeance": "Primordial Vengeance"
+}
