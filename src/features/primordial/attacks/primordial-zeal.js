@@ -3,9 +3,12 @@ import { applyEffectViaSocket } from "../../../utils/socket.js";
 
 /**
  * PRIMORDIAL ZEAL — Elantir
- * 
  * "Quench the flames with blood."
- * Song: Tenebre Rosso Sangue — Keygen Church
+ * 
+ * Feinde: Radiant Damage | Verbündete: AC Buff + Temp HP
+ * 
+ * Hinweis: Im Cut-In Macro heißt es "Primordial Wrath" — das ist der Display-Name.
+ * Der Item-Name im Code bleibt "Primordial Zeal".
  */
 
 const SPELL_NAME = "Primordial Zeal";
@@ -18,13 +21,12 @@ const CUT_IN_CONFIG = {
   groupId: "",
   img: "assets/CharacterPortraits/CinematicPortraits/Elantir_Cutin.png",
   theme: "slash",
-  customDuration: 4,
+  customDuration: 5,
   hideBackground: false,
-  localOnly: false,
   screenPosX: 50,
   screenPos: 50,
-  charScale: 1.2,
-  charOffsetX: 100,
+  charScale: 1.5,
+  charOffsetX: 120,
   charOffsetY: 100,
   charRotation: 10,
   charMirror: false,
@@ -35,34 +37,30 @@ const CUT_IN_CONFIG = {
   mainOffsetY: 0,
   subText: "Primordial Zeal",
   hideSubText: false,
-  subFontSize: 1,
+  subFontSize: 1.5,
   subOffsetX: 0,
   subOffsetY: 0,
   fontFamily: "Modesto Condensed",
-  fontBold: true,
-  fontItalic: false,
-  subFontFamily: "Modesto Condensed",
-  subFontBold: true,
-  subFontItalic: false,
-  mainTextColor: "#ffffff",
+  mainTextColor: "#000000",
   subTextColor: "#000000",
-  color: "#ffcc00",               // Elantir: Gold
+  color: "#ffc800",
   borderWidth: 0,
   borderColor: "#ffffff",
   charShadowColor: "#000000",
   hideCharShadow: false,
-  shakeIntensity: 4,
+  shakeIntensity: 10,
   dimIntensity: 0,
-  soundList: {
-    "0": "assets/AudioAssets/CutinAudio/Elantir_PrimordialVoice.m4a"  // TODO: Pfad anpassen
-  },
-  sfxList: {
-    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
-  },
+  soundList: { "0": "" },
+  sfxList: { "0": "assets/AudioAssets/CutinAudio/Elantir_PrimordialAudio.m4a" },
   soundVolume: 80,
-  sfxVolume: 80,
+  sfxVolume: 100,
   keepAudioPlaying: true,
-  audioOnly: false
+  audioOnly: false,
+  presetName: "Elantir_PrimordialWrath",
+  id: "Zju5E5ck0fTALvZF",
+  sound: "",
+  sfx: "assets/AudioAssets/CutinAudio/Elantir_PrimordialAudio.m4a",
+  actorId: "Actor.pOYckKwvTt0BDrDW"
 };
 
 export function registerPrimordialZeal() {
@@ -70,17 +68,19 @@ export function registerPrimordialZeal() {
     name: SPELL_NAME,
     cutIn: CUT_IN_CONFIG,
     cutInDelay: 5000
-  }, async ({ workflow, actor, item, targets }) => {
+  }, async ({ workflow, actor, item, enemies, allies }) => {
 
+    // Radiant Damage auf FEINDE
     const { total: damageTotal } = await rollDamage({
       actor, formula: DAMAGE_FORMULA,
       flavor: `${SPELL_NAME} — Radiant Damage`
     });
 
-    if (targets.length) {
-      await applyDamageToTargets(targets, damageTotal);
+    if (enemies.length) {
+      await applyDamageToTargets(enemies, damageTotal);
     }
 
+    // Temp HP für VERBÜNDETE
     const rollData = actor.getRollData?.() ?? {};
     const tempRoll = await new Roll(TEMP_HP_ALLIES, rollData).evaluate();
     const tempHp = Math.max(0, tempRoll.total);
@@ -90,6 +90,7 @@ export function registerPrimordialZeal() {
       flavor: `DSR-EX | ${SPELL_NAME} — Temp HP für Verbündete`
     });
 
+    // AC-Buff auf Caster
     const buffEffect = {
       name: "Primordial Zeal — Schutzaura",
       img: item.img ?? "icons/magic/holy/barrier-shield-winged-cross.webp",
@@ -113,7 +114,7 @@ export function registerPrimordialZeal() {
           Seine Augen glühen golden. Die Orgel schreit. Die Kathedrale brennt.
         </div>
         <div style="margin-top:8px; color:#ffdd44;">
-          Radiant Damage: ${damageTotal}
+          Radiant Damage (Feinde): ${damageTotal}
         </div>
         <div style="color:#88ff88;">
           Verbündete: +${BUFF_AC} AC (${BUFF_DURATION}s) | Temp HP: ${tempHp}

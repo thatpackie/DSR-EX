@@ -1,30 +1,26 @@
-import { registerPrimordialAttack, rollDamage, applyDamageToTargets, applyHealToTargets } from "./base.js";
+import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
 
 /**
  * PRIMORDIAL CHAOS — Remiel
- * 
  * "Sink into insanity..."
- * Song: Deja Reve — GG Magree
+ * 
+ * Feinde: Psychic Damage | Verbündete: Temp HP
  */
 
 const SPELL_NAME = "Primordial Chaos";
 const BASE_DAMAGE = "4d10";
 const TEMP_HP_FORMULA = "2d6 + @abilities.wis.mod";
 
-// ─── Cut-In Config ──────────────────────────────────────────────────────────
-// Paste hier dein Cinematic Cut-Ins Macro für Remiel rein.
-// Wenn null, wird kein Cut-In abgespielt.
 const CUT_IN_CONFIG = {
   groupId: "",
   img: "assets/CharacterPortraits/CinematicPortraits/Remiel_Cutin.png",
   theme: "slash",
-  customDuration: 4,
+  customDuration: 5,
   hideBackground: false,
-  localOnly: false,
   screenPosX: 50,
   screenPos: 50,
-  charScale: 1.2,
-  charOffsetX: 100,
+  charScale: 1.5,
+  charOffsetX: 120,
   charOffsetY: 100,
   charRotation: 10,
   charMirror: false,
@@ -35,34 +31,30 @@ const CUT_IN_CONFIG = {
   mainOffsetY: 0,
   subText: "Primordial Chaos",
   hideSubText: false,
-  subFontSize: 1,
+  subFontSize: 1.5,
   subOffsetX: 0,
   subOffsetY: 0,
   fontFamily: "Modesto Condensed",
-  fontBold: true,
-  fontItalic: false,
-  subFontFamily: "Modesto Condensed",
-  subFontBold: true,
-  subFontItalic: false,
-  mainTextColor: "#ffffff",
+  mainTextColor: "#000000",
   subTextColor: "#000000",
-  color: "#888888",               // Remiel: Grau
+  color: "#487d9d",
   borderWidth: 0,
   borderColor: "#ffffff",
   charShadowColor: "#000000",
   hideCharShadow: false,
-  shakeIntensity: 4,
+  shakeIntensity: 10,
   dimIntensity: 0,
-  soundList: {
-    "0": "assets/AudioAssets/CutinAudio/Remiel_PrimordialVoice.m4a"  // TODO: Pfad anpassen
-  },
-  sfxList: {
-    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
-  },
+  soundList: { "0": "" },
+  sfxList: { "0": "assets/AudioAssets/CutinAudio/Remiel_PrimordialAudio.m4a" },
   soundVolume: 80,
-  sfxVolume: 80,
+  sfxVolume: 100,
   keepAudioPlaying: true,
-  audioOnly: false
+  audioOnly: false,
+  presetName: "RemielPrimordial",
+  id: "GAKbGGQfcYTYnIh0",
+  sound: "",
+  sfx: "assets/AudioAssets/CutinAudio/Remiel_PrimordialAudio.m4a",
+  actorId: "Actor.KIBZxYsa0oCM6O1r"
 };
 
 export function registerPrimordialChaos() {
@@ -70,16 +62,19 @@ export function registerPrimordialChaos() {
     name: SPELL_NAME,
     cutIn: CUT_IN_CONFIG,
     cutInDelay: 5000
-  }, async ({ workflow, actor, item, targets }) => {
+  }, async ({ workflow, actor, item, enemies, allies }) => {
 
-    // Damage Roll
+    // Psychic Damage auf FEINDE
     const { total: damageTotal } = await rollDamage({
-      actor,
-      formula: BASE_DAMAGE,
+      actor, formula: BASE_DAMAGE,
       flavor: `${SPELL_NAME} — Psychic Damage`
     });
 
-    // Temp HP Roll
+    if (enemies.length) {
+      await applyDamageToTargets(enemies, damageTotal);
+    }
+
+    // Temp HP für VERBÜNDETE
     const rollData = actor.getRollData?.() ?? {};
     const tempHpRoll = await new Roll(TEMP_HP_FORMULA, rollData).evaluate();
     const tempHp = Math.max(0, tempHpRoll.total);
@@ -88,10 +83,6 @@ export function registerPrimordialChaos() {
       speaker: ChatMessage.getSpeaker({ actor }),
       flavor: `DSR-EX | ${SPELL_NAME} — Temporary HP für Verbündete`
     });
-
-    if (targets.length) {
-      await applyDamageToTargets(targets, damageTotal);
-    }
 
     await ChatMessage.create({
       content: `<div style="text-align:center; padding:8px; border: 1px solid #666; border-radius:4px; background: linear-gradient(135deg, #1a1a2e, #16213e);">
@@ -103,7 +94,7 @@ export function registerPrimordialChaos() {
           Geisterhafte Gesichter blicken aus den Rissen. Ein Kinderlachen hallt.
         </div>
         <div style="margin-top:8px; color:#ff8888;">
-          Psychic Damage: ${damageTotal}
+          Psychic Damage (Feinde): ${damageTotal}
         </div>
         <div style="color:#88ccff;">
           Temp HP (Verbündete): ${tempHp}

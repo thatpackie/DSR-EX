@@ -1,8 +1,8 @@
 {
   "id": "DSR-EX",
   "title": "DSR-EX: Primordial Attacks",
-  "version": "0.1.0",
-  "description": "Primordial Attack System für Die schwarze Renaissance. Primordial Energy Ressource, automatisches Charging/Decay und Primordial Attacks für alle Charaktere.",
+  "version": "0.2.0",
+  "description": "Primordial Attack System für Die schwarze Renaissance. Primordial Energy Ressource, automatisches Charging/Decay, Cinematic Cut-Ins und Primordial Attacks.",
   "authors": [
     { "name": "Packie" },
     { "name": "Claude" }
@@ -12,6 +12,7 @@
     "verified": "13"
   },
   "esmodules": ["src/init.js"],
+  "styles": ["styles/energy-hud.css"],
   "packs": [],
   "languages": [
     {

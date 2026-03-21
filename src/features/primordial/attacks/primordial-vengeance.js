@@ -2,9 +2,9 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./ba
 
 /**
  * PRIMORDIAL VENGEANCE — Vaelorin
- * 
  * "Time to reap."
- * Song: Crimson Cloud — Jeff Rona
+ * 
+ * Single Target Burst (Psychic + Necrotic) + Invisibility
  */
 
 const SPELL_NAME = "Primordial Vengeance";
@@ -15,13 +15,12 @@ const CUT_IN_CONFIG = {
   groupId: "",
   img: "assets/CharacterPortraits/CinematicPortraits/Vaelorin_Cutin.png",
   theme: "slash",
-  customDuration: 4,
+  customDuration: 5,
   hideBackground: false,
-  localOnly: false,
   screenPosX: 50,
   screenPos: 50,
-  charScale: 1.2,
-  charOffsetX: 100,
+  charScale: 1.5,
+  charOffsetX: 120,
   charOffsetY: 100,
   charRotation: 10,
   charMirror: false,
@@ -32,34 +31,30 @@ const CUT_IN_CONFIG = {
   mainOffsetY: 0,
   subText: "Primordial Vengeance",
   hideSubText: false,
-  subFontSize: 1,
+  subFontSize: 1.5,
   subOffsetX: 0,
   subOffsetY: 0,
   fontFamily: "Modesto Condensed",
-  fontBold: true,
-  fontItalic: false,
-  subFontFamily: "Modesto Condensed",
-  subFontBold: true,
-  subFontItalic: false,
   mainTextColor: "#ffffff",
   subTextColor: "#000000",
-  color: "#aa44ff",               // Vaelorin: Violett
+  color: "#5f009e",
   borderWidth: 0,
   borderColor: "#ffffff",
   charShadowColor: "#000000",
   hideCharShadow: false,
-  shakeIntensity: 4,
+  shakeIntensity: 10,
   dimIntensity: 0,
-  soundList: {
-    "0": "assets/AudioAssets/CutinAudio/Vaelorin_PrimordialVoice.m4a"  // TODO: Pfad anpassen
-  },
-  sfxList: {
-    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
-  },
+  soundList: { "0": "" },
+  sfxList: { "0": "assets/AudioAssets/CutinAudio/Vaelorin_PrimordialAudio.m4a" },
   soundVolume: 80,
-  sfxVolume: 80,
+  sfxVolume: 100,
   keepAudioPlaying: true,
-  audioOnly: false
+  audioOnly: false,
+  presetName: "VaelorinPrimordial",
+  id: "x7NUCI9h5Zuk6cgi",
+  sound: "",
+  sfx: "assets/AudioAssets/CutinAudio/Vaelorin_PrimordialAudio.m4a",
+  actorId: "Actor.ZpCiDQQhXzA6wrVi"
 };
 
 export function registerPrimordialVengeance() {
@@ -67,9 +62,10 @@ export function registerPrimordialVengeance() {
     name: SPELL_NAME,
     cutIn: CUT_IN_CONFIG,
     cutInDelay: 5000
-  }, async ({ workflow, actor, item, targets }) => {
+  }, async ({ workflow, actor, item, enemies }) => {
 
-    const target = targets[0];
+    // Single Target — erstes feindliches Ziel
+    const target = enemies[0];
 
     const { total: psychicTotal } = await rollDamage({
       actor, formula: DAMAGE_PSYCHIC,
@@ -87,6 +83,7 @@ export function registerPrimordialVengeance() {
       await applyDamageToTargets([target], totalDamage);
     }
 
+    // Invisibility
     try {
       const invisEffect = {
         name: "Primordial Vengeance — Schatten",

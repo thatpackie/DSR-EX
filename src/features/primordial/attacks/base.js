@@ -7,23 +7,14 @@ import { MODULE_ID } from "../../../settings.js";
  * Flow:
  * 1. midi-qol Hook feuert
  * 2. Item-Name matcht → Energy Check
- * 3. Energy < 100 → Abbruch mit Warnung
- * 4. Energy = 100 → Energy konsumieren
- * 5. Cinematic Cut-In abspielen (falls konfiguriert)
- * 6. Warten bis Cut-In fertig (~5 Sek.)
- * 7. Attack-Logik ausführen (Damage, Heal, etc.)
- * 
- * Usage:
- *   registerPrimordialAttack({
- *     name: "Primordial Chaos",
- *     cutIn: { ... },         // Cinematic Cut-In Config (optional)
- *     cutInDelay: 5000,       // ms Wartezeit nach Cut-In (default: 5000)
- *   }, async ({ workflow, actor, item, targets }) => {
- *     // Attack-Logik hier
- *   });
+ * 3. Energy < 100 → Abbruch mit Warnung, NICHTS passiert
+ * 4. Energy = 100 →
+ *      a. Energy konsumieren
+ *      b. Cinematic Cut-In abspielen (falls konfiguriert)
+ *      c. Warten bis Cut-In fertig (~5 Sek.)
+ *      d. Attack-Logik ausführen (Damage, Heal, etc.)
  */
 export function registerPrimordialAttack(config, executeAttack) {
-  // Config kann ein String (nur Name) oder ein Objekt sein
   const spellName = typeof config === "string" ? config : config.name;
   const cutInConfig = typeof config === "object" ? config.cutIn : null;
   const cutInDelay = typeof config === "object" ? (config.cutInDelay ?? 5000) : 5000;
@@ -35,7 +26,7 @@ export function registerPrimordialAttack(config, executeAttack) {
       if (!item || !actor) return;
       if ((item.name ?? "").trim() !== spellName) return;
 
-      // Energy Check — bei < 100 passiert NICHTS (kein Roll, kein Chat)
+      // Energy Check
       if (!isReady(actor)) {
         const current = getEnergy(actor);
         const max = game.settings.get(MODULE_ID, "maxEnergy");
@@ -43,31 +34,33 @@ export function registerPrimordialAttack(config, executeAttack) {
         return;
       }
 
-      // Targets sammeln
-      const targets = getTargets(workflow);
+      // Alle Targets sammeln und nach Disposition aufteilen
+      const allTargets = getTargets(workflow);
+      const enemies = allTargets.filter(t => isHostile(t));
+      const allies = allTargets.filter(t => isFriendly(t));
 
       // Energy konsumieren
       const consumed = await consumeEnergy(actor);
       if (!consumed) return;
 
-      // GM-Whisper: Attack genutzt
+      // GM-Whisper
       await whisperToGM(
         [
           `DSR-EX | ${spellName} AKTIVIERT`,
           `Caster: ${actor.name}`,
-          `Targets (${targets.length}): ${targets.map(t => t.name).join(", ") || "keine"}`
+          `Feinde (${enemies.length}): ${enemies.map(t => t.name).join(", ") || "keine"}`,
+          `Verbündete (${allies.length}): ${allies.map(t => t.name).join(", ") || "keine"}`
         ].join("\n")
       );
 
       // ─── Cinematic Cut-In ─────────────────────────────────────────
       if (cutInConfig) {
         await playCutIn(cutInConfig);
-        // Warten bis der Cut-In fertig ist
         await sleep(cutInDelay);
       }
 
       // ─── Attack-Logik ausführen ───────────────────────────────────
-      await executeAttack({ workflow, actor, item, targets });
+      await executeAttack({ workflow, actor, item, targets: allTargets, enemies, allies });
 
     } catch (err) {
       console.error(`DSR-EX | ${spellName} error`, err);
@@ -77,14 +70,24 @@ export function registerPrimordialAttack(config, executeAttack) {
   console.log(`DSR-EX | Primordial Attack registriert: ${spellName}${cutInConfig ? " (mit Cut-In)" : ""}`);
 }
 
-// ─── Cinematic Cut-In ───────────────────────────────────────────────────────
+// ─── Disposition Helpers ────────────────────────────────────────────────────
 
 /**
- * Spielt einen Cinematic Cut-In ab.
- * Nutzt die API von "Cinematic Cut-Ins" Modul.
- * 
- * @param {Object} config — Das komplette Config-Objekt für die Cut-In API.
+ * Prüft ob ein Token feindlich ist (Hostile disposition).
  */
+function isHostile(token) {
+  return (token.document?.disposition ?? token.disposition) === CONST.TOKEN_DISPOSITIONS.HOSTILE;
+}
+
+/**
+ * Prüft ob ein Token freundlich ist (Friendly disposition).
+ */
+function isFriendly(token) {
+  return (token.document?.disposition ?? token.disposition) === CONST.TOKEN_DISPOSITIONS.FRIENDLY;
+}
+
+// ─── Cinematic Cut-In ───────────────────────────────────────────────────────
+
 async function playCutIn(config) {
   try {
     const cutInModule = game.modules.get("cinematic-cut-ins");
@@ -99,20 +102,19 @@ async function playCutIn(config) {
   }
 }
 
-/**
- * Wartet eine bestimmte Anzahl Millisekunden.
- */
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-// ─── Helpers ────────────────────────────────────────────────────────────────
+// ─── Target Helpers ─────────────────────────────────────────────────────────
 
 function getTargets(workflow) {
   const set = workflow?.targets;
   if (!set) return [];
   return Array.from(set).filter(t => t?.actor);
 }
+
+// ─── Damage / Heal ──────────────────────────────────────────────────────────
 
 export async function rollDamage({ actor, formula, flavor }) {
   const rollData = actor.getRollData?.() ?? {};
@@ -148,6 +150,8 @@ export async function applyHealToTargets(targets, amount) {
     await applyHpViaSocket(a, Math.min(hp.max, hp.value + heal));
   }
 }
+
+// ─── GM Whisper ─────────────────────────────────────────────────────────────
 
 export async function whisperToGM(text) {
   const whisperEnabled = game.settings.get(MODULE_ID, "gmWhisper");

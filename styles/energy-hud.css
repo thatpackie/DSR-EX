@@ -1,0 +1,32 @@
+.dsr-ex-energy-hud {
+  position: fixed;
+  bottom: 20px;
+  left: 20px;
+  z-index: 100;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.dsr-ex-energy-hud.hidden {
+  opacity: 0;
+}
+
+.dsr-ex-energy-icon {
+  width: 64px;
+  height: 64px;
+  transition: filter 0.8s ease;
+}
+
+.dsr-ex-energy-icon.primordial-ready {
+  animation: dsr-ex-pulse 2.5s ease-in-out infinite;
+}
+
+@keyframes dsr-ex-pulse {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px var(--dsr-ex-glow-color, #888));
+  }
+  50% {
+    filter: drop-shadow(0 0 10px var(--dsr-ex-glow-color, #888))
+            drop-shadow(0 0 16px var(--dsr-ex-glow-color, #888));
+  }
+}

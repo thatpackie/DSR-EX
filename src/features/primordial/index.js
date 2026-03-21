@@ -1,4 +1,5 @@
 import { registerEnergyHooks, addBonusEnergy, setEnergyDirect, getEnergy, isReady } from "./energy.js";
+import { registerEnergyHUD } from "./energy-hud.js";
 import { ensurePrimordialItems } from "./items.js";
 import { registerPrimordialChaos } from "./attacks/primordial-chaos.js";
 import { registerPrimordialRage } from "./attacks/primordial-rage.js";
@@ -15,6 +16,9 @@ export function registerPrimordial() {
   // Energy System (passive charge + decay hooks)
   registerEnergyHooks();
 
+  // Energy HUD (visuelles Icon pro Spieler)
+  registerEnergyHUD();
+
   // Primordial Attacks
   registerPrimordialChaos();
   registerPrimordialRage();
@@ -22,8 +26,7 @@ export function registerPrimordial() {
   registerPrimordialZeal();
   registerPrimordialVengeance();
 
-  // Public API — aufrufbar via Macros
-  // Beispiel: game.modules.get("DSR-EX").api.addBonusEnergy(token.actor, 20)
+  // Public API
   const moduleData = game.modules.get("DSR-EX");
   if (moduleData) {
     moduleData.api = {

@@ -2,9 +2,9 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets, applyHealTo
 
 /**
  * PRIMORDIAL ECLIPSE — Theia (Selene)
- * 
  * "I won't hold back anymore."
- * Song: A Stranger I Remain — Free Dominguez
+ * 
+ * Feinde: Radiant + Psychic Damage | Verbündete: Heilung
  */
 
 const SPELL_NAME = "Primordial Eclipse";
@@ -16,13 +16,12 @@ const CUT_IN_CONFIG = {
   groupId: "",
   img: "assets/CharacterPortraits/CinematicPortraits/Theia_Cutin.png",
   theme: "slash",
-  customDuration: 4,
+  customDuration: 5,
   hideBackground: false,
-  localOnly: false,
   screenPosX: 50,
   screenPos: 50,
-  charScale: 1.2,
-  charOffsetX: 100,
+  charScale: 1.5,
+  charOffsetX: 120,
   charOffsetY: 100,
   charRotation: 10,
   charMirror: false,
@@ -33,34 +32,30 @@ const CUT_IN_CONFIG = {
   mainOffsetY: 0,
   subText: "Primordial Eclipse",
   hideSubText: false,
-  subFontSize: 1,
+  subFontSize: 1.5,
   subOffsetX: 0,
   subOffsetY: 0,
   fontFamily: "Modesto Condensed",
-  fontBold: true,
-  fontItalic: false,
-  subFontFamily: "Modesto Condensed",
-  subFontBold: true,
-  subFontItalic: false,
   mainTextColor: "#ffffff",
   subTextColor: "#000000",
-  color: "#88aaff",               // Theia: Eisblau
+  color: "#47eaff",
   borderWidth: 0,
   borderColor: "#ffffff",
   charShadowColor: "#000000",
   hideCharShadow: false,
-  shakeIntensity: 4,
+  shakeIntensity: 10,
   dimIntensity: 0,
-  soundList: {
-    "0": "assets/AudioAssets/CutinAudio/Theia_PrimordialVoice.m4a"  // TODO: Pfad anpassen
-  },
-  sfxList: {
-    "0": "modules/cinematic-cut-ins/sounds/finish_urban.mp3"
-  },
+  soundList: { "0": "" },
+  sfxList: { "0": "assets/AudioAssets/CutinAudio/Theia_PrimordialAudio.m4a" },
   soundVolume: 80,
-  sfxVolume: 80,
+  sfxVolume: 100,
   keepAudioPlaying: true,
-  audioOnly: false
+  audioOnly: false,
+  presetName: "TheiaPrimordial",
+  id: "3Zu7VY7g6QO8gGzu",
+  sound: "",
+  sfx: "assets/AudioAssets/CutinAudio/Theia_PrimordialAudio.m4a",
+  actorId: "Actor.1ED4XnogRmxRAeHr"
 };
 
 export function registerPrimordialEclipse() {
@@ -68,8 +63,9 @@ export function registerPrimordialEclipse() {
     name: SPELL_NAME,
     cutIn: CUT_IN_CONFIG,
     cutInDelay: 5000
-  }, async ({ workflow, actor, item, targets }) => {
+  }, async ({ workflow, actor, item, enemies, allies }) => {
 
+    // Damage auf FEINDE
     const { total: radiantTotal } = await rollDamage({
       actor, formula: DAMAGE_RADIANT,
       flavor: `${SPELL_NAME} — Radiant Damage`
@@ -82,13 +78,18 @@ export function registerPrimordialEclipse() {
 
     const totalDamage = radiantTotal + psychicTotal;
 
-    if (targets.length) {
-      await applyDamageToTargets(targets, totalDamage);
+    if (enemies.length) {
+      await applyDamageToTargets(enemies, totalDamage);
     }
 
+    // Heilung für VERBÜNDETE
     const rollData = actor.getRollData?.() ?? {};
     const healRoll = await new Roll(HEAL_FORMULA, rollData).evaluate();
     const healTotal = Math.max(0, healRoll.total);
+
+    if (allies.length) {
+      await applyHealToTargets(allies, healTotal);
+    }
 
     await healRoll.toMessage({
       speaker: ChatMessage.getSpeaker({ actor }),
@@ -105,7 +106,7 @@ export function registerPrimordialEclipse() {
           nicht als Erinnerung, sondern als Wesen. Geflügelt, leuchtend, schreiend.
         </div>
         <div style="margin-top:8px; color:#aaccff;">
-          Radiant: ${radiantTotal} | Psychic: ${psychicTotal}
+          Radiant: ${radiantTotal} | Psychic: ${psychicTotal} (Feinde)
         </div>
         <div style="color:#88ff88;">
           Heilung (Verbündete): ${healTotal}
