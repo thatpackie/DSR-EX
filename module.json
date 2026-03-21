@@ -29,6 +29,9 @@
       }
     ]
   },
+  "url": "https://github.com/thatpackie/DSR-EX",
+  "manifest": "https://raw.githubusercontent.com/thatpackie/DSR-EX/main/module.json",
+  "download": "https://github.com/thatpackie/DSR-EX/archive/refs/heads/main.zip",
   "flags": {
     "hotReload": {
       "extensions": ["css", "hbs", "json"],
