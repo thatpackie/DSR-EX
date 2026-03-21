@@ -45,4 +45,12 @@ export function registerDsrExSettings() {
     type: Boolean,
     default: true
   });
+
+  // Internes Flag: Item-Setup bereits gelaufen?
+  game.settings.register(MODULE_ID, "itemSetupComplete", {
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
 }

@@ -1,4 +1,5 @@
 import { registerEnergyHooks, addBonusEnergy, setEnergyDirect, getEnergy, isReady } from "./energy.js";
+import { ensurePrimordialItems } from "./items.js";
 import { registerPrimordialChaos } from "./attacks/primordial-chaos.js";
 import { registerPrimordialRage } from "./attacks/primordial-rage.js";
 import { registerPrimordialEclipse } from "./attacks/primordial-eclipse.js";
@@ -7,6 +8,9 @@ import { registerPrimordialVengeance } from "./attacks/primordial-vengeance.js";
 
 export function registerPrimordial() {
   if (!game.settings.get("DSR-EX", "primordialEnabled")) return;
+
+  // Auto-Setup: Erstelle Primordial Items falls nötig
+  ensurePrimordialItems();
 
   // Energy System (passive charge + decay hooks)
   registerEnergyHooks();
