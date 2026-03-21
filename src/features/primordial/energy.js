@@ -5,29 +5,17 @@ import { MODULE_ID } from "../../settings.js";
  * Primordial Energy System
  * 
  * Energy wird als Actor-Flag gespeichert: flags.DSR-EX.primordialEnergy (0–100)
- * 
- * Aufladung:
- *   - Passiv: +passiveChargePerRound pro Kampfrunde (automatisch)
- *   - Bonus: Manuell durch DM via addBonusEnergy() oder Macro
- * 
- * Decay:
- *   - Nach Kampfende: -decayAfterCombat
- * 
- * Kein Rest-Reset: Short/Long Rest ändern nichts.
  */
+
+// Tracking der letzten bekannten Runde, um Rundenwechsel zu erkennen
+let lastKnownRound = 0;
 
 // ─── Getter / Setter ────────────────────────────────────────────────────────
 
-/**
- * Gibt die aktuelle Primordial Energy eines Actors zurück.
- */
 export function getEnergy(actor) {
   return actor.getFlag("DSR-EX", "primordialEnergy") ?? 0;
 }
 
-/**
- * Setzt die Primordial Energy eines Actors (clamped auf 0–max).
- */
 export async function setEnergy(actor, value) {
   const max = game.settings.get(MODULE_ID, "maxEnergy");
   const clamped = Math.max(0, Math.min(max, Math.round(value)));
@@ -35,18 +23,11 @@ export async function setEnergy(actor, value) {
   return clamped;
 }
 
-/**
- * Gibt true zurück, wenn die Primordial Attack bereit ist.
- */
 export function isReady(actor) {
   const max = game.settings.get(MODULE_ID, "maxEnergy");
   return getEnergy(actor) >= max;
 }
 
-/**
- * Konsumiert die volle Energy für eine Primordial Attack.
- * Gibt true zurück bei Erfolg, false wenn nicht genug Energy.
- */
 export async function consumeEnergy(actor) {
   if (!isReady(actor)) return false;
   await setEnergy(actor, 0);
@@ -56,10 +37,6 @@ export async function consumeEnergy(actor) {
 
 // ─── Charging ───────────────────────────────────────────────────────────────
 
-/**
- * Fügt passive Charge zu allen PC-Combatants hinzu.
- * Wird automatisch bei Rundenwechsel aufgerufen.
- */
 async function applyPassiveCharge(combat) {
   const amount = game.settings.get(MODULE_ID, "passiveChargePerRound");
   if (amount <= 0) return;
@@ -75,52 +52,34 @@ async function applyPassiveCharge(combat) {
     const newValue = await setEnergy(actor, current + amount);
     await whisperToGM(`DSR-EX | ${actor.name}: Passive Charge +${amount} → ${newValue}/${max}`);
 
-    // Benachrichtigung wenn Energy voll ist
     if (newValue >= max) {
       await notifyEnergyFull(actor);
     }
   }
 }
 
-/**
- * Fügt einem einzelnen Actor Bonus-Energy hinzu.
- * Für den DM: Aufrufbar via Macro oder manuell.
- * 
- * Macro-Beispiel:
- *   game.modules.get("DSR-EX").api.addBonusEnergy(token.actor, 20);
- */
+// ─── Bonus Energy (DM Macro API) ───────────────────────────────────────────
+
 export async function addBonusEnergy(actor, amount) {
   if (!actor) {
     ui.notifications.warn("DSR-EX | Kein Actor angegeben.");
     return;
   }
-
   const current = getEnergy(actor);
   const max = game.settings.get(MODULE_ID, "maxEnergy");
   const newValue = await setEnergy(actor, current + amount);
-
   await whisperToGM(`DSR-EX | ${actor.name}: Bonus Charge +${amount} → ${newValue}/${max}`);
-
   if (newValue >= max && current < max) {
     await notifyEnergyFull(actor);
   }
-
   return newValue;
 }
 
-/**
- * Setzt die Energy eines Actors direkt auf einen Wert.
- * Für den DM: Override für Sonderfälle.
- * 
- * Macro-Beispiel:
- *   game.modules.get("DSR-EX").api.setEnergyDirect(token.actor, 50);
- */
 export async function setEnergyDirect(actor, value) {
   if (!actor) {
     ui.notifications.warn("DSR-EX | Kein Actor angegeben.");
     return;
   }
-
   const newValue = await setEnergy(actor, value);
   const max = game.settings.get(MODULE_ID, "maxEnergy");
   await whisperToGM(`DSR-EX | ${actor.name}: Energy gesetzt auf ${newValue}/${max}`);
@@ -129,10 +88,6 @@ export async function setEnergyDirect(actor, value) {
 
 // ─── Decay ──────────────────────────────────────────────────────────────────
 
-/**
- * Wendet Decay auf alle PC-Combatants an.
- * Wird automatisch bei Kampfende aufgerufen.
- */
 async function applyDecay(combat) {
   const amount = game.settings.get(MODULE_ID, "decayAfterCombat");
   if (amount <= 0) return;
@@ -151,11 +106,7 @@ async function applyDecay(combat) {
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 
-/**
- * Benachrichtigt alle, wenn ein Charakter volle Primordial Energy hat.
- */
 async function notifyEnergyFull(actor) {
-  // Chat-Nachricht für alle sichtbar
   await ChatMessage.create({
     content: `<div style="text-align:center; font-size:1.2em; font-weight:bold; color:#ff6600; text-shadow: 0 0 8px #ff6600;">
       ⚡ ${actor.name}: PRIMORDIAL BEREIT ⚡
@@ -166,21 +117,41 @@ async function notifyEnergyFull(actor) {
 
 // ─── Hooks ──────────────────────────────────────────────────────────────────
 
-/**
- * Registriert alle Combat-Hooks für automatisches Charging und Decay.
- */
 export function registerEnergyHooks() {
   // Passive Charge bei Rundenwechsel
   Hooks.on("updateCombat", async (combat, update, options, userId) => {
-    // Nur der GM prozessiert, um Doppelverarbeitung zu vermeiden
     if (!game.user.isGM) return;
     if (!game.settings.get(MODULE_ID, "primordialEnabled")) return;
 
-    // Prüfe ob eine neue Runde begonnen hat
-    if (update.round !== undefined && update.round > (combat._source?.round ?? 0)) {
-      console.log(`DSR-EX | Neue Runde: ${update.round} — Passive Charge wird angewendet`);
-      await applyPassiveCharge(combat);
+    // Prüfe ob sich die Runde geändert hat
+    // update.round existiert NUR wenn sich die Runde tatsächlich geändert hat
+    if (update.round === undefined) return;
+
+    const newRound = update.round;
+
+    // Runde 0→1 ist Kampfbeginn, ab Runde 2+ ist es ein Rundenwechsel
+    // Wir chargen ab Runde 2 (= nach der ersten vollen Runde)
+    if (newRound <= 1) {
+      lastKnownRound = newRound;
+      console.log(`DSR-EX | Kampf gestartet (Runde ${newRound}) — noch kein Charge`);
+      return;
     }
+
+    // Nur chargen wenn die Runde vorwärts ging (nicht bei Rückwärts-Korrektur)
+    if (newRound <= lastKnownRound) {
+      lastKnownRound = newRound;
+      return;
+    }
+
+    lastKnownRound = newRound;
+    console.log(`DSR-EX | Neue Runde: ${newRound} — Passive Charge wird angewendet`);
+    await applyPassiveCharge(combat);
+  });
+
+  // Reset des Round-Trackers bei Kampfbeginn
+  Hooks.on("createCombat", () => {
+    lastKnownRound = 0;
+    console.log("DSR-EX | Neuer Kampf — Round-Tracker zurückgesetzt");
   });
 
   // Decay bei Kampfende
@@ -188,6 +159,7 @@ export function registerEnergyHooks() {
     if (!game.user.isGM) return;
     if (!game.settings.get(MODULE_ID, "primordialEnabled")) return;
 
+    lastKnownRound = 0;
     console.log("DSR-EX | Kampf beendet — Decay wird angewendet");
     await applyDecay(combat);
   });

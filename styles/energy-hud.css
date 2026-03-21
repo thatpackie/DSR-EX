@@ -1,7 +1,7 @@
 .dsr-ex-energy-hud {
   position: fixed;
-  bottom: 20px;
-  left: 20px;
+  bottom: 120px;
+  left: 12px;
   z-index: 100;
   pointer-events: none;
   transition: opacity 0.5s ease;
@@ -12,8 +12,8 @@
 }
 
 .dsr-ex-energy-icon {
-  width: 64px;
-  height: 64px;
+  width: 56px;
+  height: 56px;
   transition: filter 0.8s ease;
 }
 
@@ -23,10 +23,9 @@
 
 @keyframes dsr-ex-pulse {
   0%, 100% {
-    filter: drop-shadow(0 0 4px var(--dsr-ex-glow-color, #888));
+    filter: drop-shadow(0 0 3px var(--dsr-ex-glow-color, #888));
   }
   50% {
-    filter: drop-shadow(0 0 10px var(--dsr-ex-glow-color, #888))
-            drop-shadow(0 0 16px var(--dsr-ex-glow-color, #888));
+    filter: drop-shadow(0 0 8px var(--dsr-ex-glow-color, #888));
   }
 }
