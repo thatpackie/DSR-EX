@@ -44,13 +44,16 @@ function buildUtilityActivity(overrides = {}) {
       flags: {},
       range: {
         units: overrides.rangeUnits ?? "ft",
+        value: overrides.rangeValue ?? "",
         override: true
       },
       target: {
         template: {
           contiguous: false,
           units: "ft",
-          type: overrides.templateType ?? ""
+          type: overrides.templateType ?? "",
+          size: overrides.templateSize ?? "",
+          width: overrides.templateWidth ?? ""
         },
         affects: {
           choice: false,
@@ -82,6 +85,7 @@ const PRIMORDIAL_ITEMS = [
     name: "Primordial Chaos",
     type: "feat",
     img: "icons/magic/unholy/barrier-fire-pink.webp",
+    // Sphere, 30 ft Radius
     system: {
       description: {
         value: `<p><strong>Primordial Chaos</strong> — Remiel</p>
@@ -106,6 +110,9 @@ const PRIMORDIAL_ITEMS = [
     activityOverrides: {
       chatFlavor: "Primordial Chaos — Sink into insanity...",
       rangeUnits: "ft",
+      rangeValue: "30",
+      templateType: "sphere",
+      templateSize: "30",
       targetType: "any"
     },
     flags: { "DSR-EX": { isPrimordialAttack: true, character: "Remiel" } }
@@ -138,6 +145,9 @@ const PRIMORDIAL_ITEMS = [
     activityOverrides: {
       chatFlavor: "Primordial Rage — AAAAAAAAAH!",
       rangeUnits: "ft",
+      rangeValue: "30",
+      templateType: "cone",
+      templateSize: "30",   // Länge der Cone in ft
       targetType: "any"
     },
     flags: { "DSR-EX": { isPrimordialAttack: true, character: "Pyraxis" } }
@@ -170,6 +180,9 @@ const PRIMORDIAL_ITEMS = [
     activityOverrides: {
       chatFlavor: "Primordial Eclipse — I won't hold back anymore.",
       rangeUnits: "ft",
+      rangeValue: "30",
+      templateType: "sphere",
+      templateSize: "30",
       targetType: "any"
     },
     flags: { "DSR-EX": { isPrimordialAttack: true, character: "Theia" } }
@@ -202,6 +215,9 @@ const PRIMORDIAL_ITEMS = [
     activityOverrides: {
       chatFlavor: "Primordial Zeal — Quench the flames with blood.",
       rangeUnits: "ft",
+      rangeValue: "30",
+      templateType: "sphere",
+      templateSize: "30",
       targetType: "any"
     },
     flags: { "DSR-EX": { isPrimordialAttack: true, character: "Elantir" } }
@@ -234,6 +250,8 @@ const PRIMORDIAL_ITEMS = [
     activityOverrides: {
       chatFlavor: "Primordial Vengeance — Time to reap.",
       rangeUnits: "ft",
+      rangeValue: "60",
+      // Kein Template — Einzelziel
       targetType: "creature",
       targetCount: "1"
     },
@@ -282,6 +300,7 @@ export async function ensurePrimordialItems() {
     }
   }
 
+  // itemSetupComplete wird erst gesetzt wenn alles durchgelaufen ist
   await game.settings.set(MODULE_ID, "itemSetupComplete", true);
 
   if (created > 0) {

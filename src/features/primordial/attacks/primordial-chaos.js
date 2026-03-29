@@ -1,4 +1,5 @@
 import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
+import { applyTempHpViaSocket } from "../../../utils/socket.js";
 
 /**
  * PRIMORDIAL CHAOS — Remiel
@@ -83,6 +84,11 @@ export function registerPrimordialChaos() {
       speaker: ChatMessage.getSpeaker({ actor }),
       flavor: `DSR-EX | ${SPELL_NAME} — Temporary HP für Verbündete`
     });
+
+    // Temp HP anwenden
+    for (const t of allies) {
+      await applyTempHpViaSocket(t.actor, tempHp);
+    }
 
     await ChatMessage.create({
       content: `<div style="text-align:center; padding:8px; border: 1px solid #666; border-radius:4px; background: linear-gradient(135deg, #1a1a2e, #16213e);">

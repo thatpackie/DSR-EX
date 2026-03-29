@@ -1,5 +1,5 @@
 import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
-import { applyEffectViaSocket } from "../../../utils/socket.js";
+import { applyEffectViaSocket, applyTempHpViaSocket } from "../../../utils/socket.js";
 
 /**
  * PRIMORDIAL ZEAL — Elantir
@@ -80,7 +80,7 @@ export function registerPrimordialZeal() {
       await applyDamageToTargets(enemies, damageTotal);
     }
 
-    // Temp HP für VERBÜNDETE
+    // Temp HP + AC-Buff für VERBÜNDETE
     const rollData = actor.getRollData?.() ?? {};
     const tempRoll = await new Roll(TEMP_HP_ALLIES, rollData).evaluate();
     const tempHp = Math.max(0, tempRoll.total);
@@ -90,7 +90,6 @@ export function registerPrimordialZeal() {
       flavor: `DSR-EX | ${SPELL_NAME} — Temp HP für Verbündete`
     });
 
-    // AC-Buff auf Caster
     const buffEffect = {
       name: "Primordial Zeal — Schutzaura",
       img: item.img ?? "icons/magic/holy/barrier-shield-winged-cross.webp",
@@ -102,7 +101,12 @@ export function registerPrimordialZeal() {
       ]
     };
 
-    await applyEffectViaSocket(actor, buffEffect);
+    // Buff + Temp HP auf alle Verbündeten (inkl. Caster selbst)
+    const buffTargets = allies.length > 0 ? allies.map(t => t.actor) : [actor];
+    for (const a of buffTargets) {
+      await applyTempHpViaSocket(a, tempHp);
+      await applyEffectViaSocket(a, buffEffect);
+    }
 
     await ChatMessage.create({
       content: `<div style="text-align:center; padding:8px; border: 1px solid #666; border-radius:4px; background: linear-gradient(135deg, #2e2a0a, #3e3108);">

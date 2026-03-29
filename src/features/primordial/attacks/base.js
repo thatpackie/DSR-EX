@@ -20,6 +20,9 @@ export function registerPrimordialAttack(config, executeAttack) {
   const cutInDelay = typeof config === "object" ? (config.cutInDelay ?? 5000) : 5000;
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
+    // Nur der GM verarbeitet Primordial Attack Logic — verhindert Race Conditions
+    if (!game.user.isGM) return;
+
     try {
       const item = workflow?.item;
       const actor = workflow?.actor;
@@ -73,17 +76,27 @@ export function registerPrimordialAttack(config, executeAttack) {
 // ─── Disposition Helpers ────────────────────────────────────────────────────
 
 /**
- * Prüft ob ein Token feindlich ist (Hostile disposition).
+ * Prüft ob ein Token ein Feind ist.
+ * NPC + nicht Friendly Disposition = Feind.
+ * Verhindert dass Friendly-NPCs (Begleiter) als Feinde gelten.
  */
 function isHostile(token) {
-  return (token.document?.disposition ?? token.disposition) === CONST.TOKEN_DISPOSITIONS.HOSTILE;
+  if (!token.actor) return false;
+  if (token.actor.type === "character") return false;  // PCs sind nie Feinde
+  const disp = token.document?.disposition ?? token.disposition;
+  return disp !== CONST.TOKEN_DISPOSITIONS.FRIENDLY;
 }
 
 /**
- * Prüft ob ein Token freundlich ist (Friendly disposition).
+ * Prüft ob ein Token ein Verbündeter ist.
+ * PCs sind immer Verbündete.
+ * Friendly-NPCs (Begleiter-NPCs) ebenfalls.
  */
 function isFriendly(token) {
-  return (token.document?.disposition ?? token.disposition) === CONST.TOKEN_DISPOSITIONS.FRIENDLY;
+  if (!token.actor) return false;
+  if (token.actor.type === "character") return true;  // PCs immer Verbündete
+  const disp = token.document?.disposition ?? token.disposition;
+  return disp === CONST.TOKEN_DISPOSITIONS.FRIENDLY;
 }
 
 // ─── Cinematic Cut-In ───────────────────────────────────────────────────────

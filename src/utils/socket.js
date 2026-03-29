@@ -23,6 +23,12 @@ export function registerSocket() {
       await actor.update({ "system.attributes.hp.value": data.value });
     }
 
+    if (data.action === "setTempHp") {
+      const actor = await fromUuid(data.actorUuid);
+      if (!actor) return;
+      await actor.update({ "system.attributes.hp.temp": data.value });
+    }
+
     if (data.action === "applyEffect") {
       const actor = await fromUuid(data.actorUuid);
       if (!actor) return;
@@ -66,6 +72,22 @@ export async function applyHpViaSocket(actor, value) {
       action: "applyHp",
       actorUuid: actor.uuid,
       value
+    });
+  }
+}
+
+/**
+ * Setzt die Temp HP eines Actors.
+ */
+export async function applyTempHpViaSocket(actor, value) {
+  const hp = Math.max(0, Number(value ?? 0));
+  if (game.user.isGM) {
+    await actor.update({ "system.attributes.hp.temp": hp });
+  } else {
+    game.socket.emit(SOCKET_NAME, {
+      action: "setTempHp",
+      actorUuid: actor.uuid,
+      value: hp
     });
   }
 }
