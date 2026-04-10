@@ -1,4 +1,4 @@
-import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
+import { registerPrimordialAttack, rollDamage, applyDamageToTargets, setTokenImg } from "./base.js";
 
 /**
  * PRIMORDIAL VENGEANCE — Vaelorin
@@ -10,6 +10,7 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./ba
 const SPELL_NAME = "Primordial Vengeance";
 const DAMAGE_PSYCHIC = "4d10";
 const DAMAGE_NECROTIC = "3d8";
+const PRIMORDIAL_IMG = "assets/CharacterPortraits/CinematicPortraits/Vaelorin_PrimordialVengeance.png";
 
 const CUT_IN_CONFIG = {
   groupId: "",
@@ -83,17 +84,19 @@ export function registerPrimordialVengeance() {
       await applyDamageToTargets([target], totalDamage);
     }
 
-    // Invisibility
+    // Invisibility + Token-Icon für 1 Runde
     try {
       const invisEffect = {
         name: "Primordial Vengeance — Schatten",
         img: "icons/magic/perception/shadow-stealth-eyes-purple.webp",
         origin: item.uuid,
         duration: { rounds: 1, startTime: game.time.worldTime },
-        flags: { "DSR-EX": { primordialVengeanceShadow: true } },
+        // restoreTokenImg: true — stellt Vaelorins Token-Bild nach 1 Runde wieder her
+        flags: { "DSR-EX": { primordialVengeanceShadow: true, restoreTokenImg: true } },
         statuses: ["invisible"]
       };
       const { applyEffectViaSocket } = await import("../../../utils/socket.js");
+      await setTokenImg(actor, PRIMORDIAL_IMG);
       await applyEffectViaSocket(actor, invisEffect);
     } catch (err) {
       console.warn("DSR-EX | Invisibility-Effekt konnte nicht gesetzt werden:", err);

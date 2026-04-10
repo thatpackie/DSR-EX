@@ -1,5 +1,6 @@
 import { consumeEnergy, isReady, getEnergy } from "../energy.js";
 import { MODULE_ID } from "../../../settings.js";
+import { applyEffectViaSocket } from "../../../utils/socket.js";
 
 /**
  * Shared base für alle Primordial Attacks.
@@ -20,14 +21,23 @@ export function registerPrimordialAttack(config, executeAttack) {
   const cutInDelay = typeof config === "object" ? (config.cutInDelay ?? 5000) : 5000;
 
   Hooks.on("midi-qol.RollComplete", async (workflow) => {
-    // Nur der GM verarbeitet Primordial Attack Logic — verhindert Race Conditions
-    if (!game.user.isGM) return;
-
     try {
       const item = workflow?.item;
       const actor = workflow?.actor;
       if (!item || !actor) return;
       if ((item.name ?? "").trim() !== spellName) return;
+
+      // Genau ein Client verarbeitet den Hook:
+      // Wenn ein aktiver, nicht-GM Spieler diesem Actor zugewiesen ist — nur dieser Spieler.
+      // Sonst: nur der GM (z.B. bei NPCs oder wenn Spieler offline ist).
+      const assignedPlayer = game.users.find(
+        u => !u.isGM && u.active && u.character?.id === actor.id
+      );
+      if (assignedPlayer) {
+        if (game.user.id !== assignedPlayer.id) return;
+      } else {
+        if (!game.user.isGM) return;
+      }
 
       // Energy Check
       if (!isReady(actor)) {
@@ -162,6 +172,77 @@ export async function applyHealToTargets(targets, amount) {
     if (!hp) continue;
     await applyHpViaSocket(a, Math.min(hp.max, hp.value + heal));
   }
+}
+
+// ─── Token Image ────────────────────────────────────────────────────────────
+
+/**
+ * Ändert das Token-Bild eines Actors und speichert das Original als Flag.
+ * Wird nach dem Cut-In aufgerufen, damit das Primordial-Bild sichtbar wird.
+ */
+export async function setTokenImg(actor, newImg) {
+  const tokens = actor.getActiveTokens();
+  if (!tokens.length) return;
+
+  // Original sichern (vom ersten aktiven Token)
+  const restoreImg = tokens[0].document.img;
+  await actor.setFlag(MODULE_ID, "tokenImgRestore", restoreImg);
+
+  for (const token of tokens) {
+    await token.document.update({ img: newImg });
+  }
+}
+
+/**
+ * Stellt das originale Token-Bild wieder her.
+ * Wird vom deleteActiveEffect-Hook aufgerufen.
+ */
+export async function restoreTokenImg(actor) {
+  const restoreImg = actor.getFlag(MODULE_ID, "tokenImgRestore");
+  if (!restoreImg) return;
+
+  const tokens = actor.getActiveTokens();
+  for (const token of tokens) {
+    await token.document.update({ img: restoreImg });
+  }
+  await actor.unsetFlag(MODULE_ID, "tokenImgRestore");
+}
+
+/**
+ * Erstellt einen reinen Visualisierungs-Effect ohne stat changes.
+ * Wird für Attacks ohne eigenen Caster-Effekt verwendet (Chaos, Rage, Eclipse).
+ * duration: in Runden (Standard: 1)
+ */
+export async function applyVisualEffect(actor, item, durationRounds = 1) {
+  const effect = {
+    name: "Primordial — Visuals",
+    img: item.img,
+    origin: item.uuid,
+    duration: { rounds: durationRounds, startTime: game.time.worldTime },
+    flags: { [MODULE_ID]: { primordialVisual: true, restoreTokenImg: true } },
+    changes: []
+  };
+  await applyEffectViaSocket(actor, effect);
+}
+
+/**
+ * Registriert den deleteActiveEffect-Hook für Token-Image-Restore.
+ * Wird einmalig aus index.js aufgerufen.
+ */
+let _tokenHookRegistered = false;
+export function registerTokenImageHooks() {
+  if (_tokenHookRegistered) return;
+  _tokenHookRegistered = true;
+
+  Hooks.on("deleteActiveEffect", async (effect, options, userId) => {
+    if (!game.user.isGM) return;
+    if (!effect.flags?.[MODULE_ID]?.restoreTokenImg) return;
+    const actor = effect.parent;
+    if (!actor) return;
+    await restoreTokenImg(actor);
+  });
+
+  console.log("DSR-EX | Token Image Hooks registriert");
 }
 
 // ─── GM Whisper ─────────────────────────────────────────────────────────────

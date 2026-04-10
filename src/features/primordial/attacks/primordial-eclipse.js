@@ -1,4 +1,4 @@
-import { registerPrimordialAttack, rollDamage, applyDamageToTargets, applyHealToTargets } from "./base.js";
+import { registerPrimordialAttack, rollDamage, applyDamageToTargets, applyHealToTargets, setTokenImg, applyVisualEffect } from "./base.js";
 
 /**
  * PRIMORDIAL ECLIPSE — Theia (Selene)
@@ -11,6 +11,7 @@ const SPELL_NAME = "Primordial Eclipse";
 const DAMAGE_RADIANT = "3d8";
 const DAMAGE_PSYCHIC = "2d8";
 const HEAL_FORMULA = "3d8 + @abilities.wis.mod";
+const PRIMORDIAL_IMG = "assets/CharacterPortraits/CinematicPortraits/Theia_PrimordialEclipse.png";
 
 const CUT_IN_CONFIG = {
   groupId: "",
@@ -95,6 +96,10 @@ export function registerPrimordialEclipse() {
       speaker: ChatMessage.getSpeaker({ actor }),
       flavor: `DSR-EX | ${SPELL_NAME} — Heilung für Verbündete`
     });
+
+    // Token-Icon für 1 Runde auf Primordial-Bild setzen
+    await setTokenImg(actor, PRIMORDIAL_IMG);
+    await applyVisualEffect(actor, item, 1);
 
     await ChatMessage.create({
       content: `<div style="text-align:center; padding:8px; border: 1px solid #666; border-radius:4px; background: linear-gradient(135deg, #0a1a2e, #0e1e3e);">

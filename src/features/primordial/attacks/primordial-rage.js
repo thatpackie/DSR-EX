@@ -1,4 +1,4 @@
-import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
+import { registerPrimordialAttack, rollDamage, applyDamageToTargets, setTokenImg, applyVisualEffect } from "./base.js";
 
 /**
  * PRIMORDIAL RAGE — Pyraxis
@@ -14,6 +14,7 @@ import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./ba
 const SPELL_NAME = "Primordial Rage";
 const DAMAGE_FORMULA = "6d8";
 const SELF_TEMP_HP = "2d8 + @abilities.con.mod";
+const PRIMORDIAL_IMG = "assets/CharacterPortraits/CinematicPortraits/Pyraxis_PrimordialRage.png";
 
 // TODO: Pyraxis Cut-In Macro war in PrimordialCutinMacros.txt eine Kopie von Elantir.
 // Die Werte unten sind best-guess. Packie muss img, sfx, actorId und presetName prüfen.
@@ -90,6 +91,10 @@ export function registerPrimordialRage() {
       speaker: ChatMessage.getSpeaker({ actor }),
       flavor: `DSR-EX | ${SPELL_NAME} — Temp HP (Kossuth's Wut)`
     });
+
+    // Token-Icon für 1 Runde auf Primordial-Bild setzen
+    await setTokenImg(actor, PRIMORDIAL_IMG);
+    await applyVisualEffect(actor, item, 1);
 
     await ChatMessage.create({
       content: `<div style="text-align:center; padding:8px; border: 1px solid #666; border-radius:4px; background: linear-gradient(135deg, #2e1a0a, #3e1608);">

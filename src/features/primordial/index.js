@@ -1,6 +1,7 @@
 import { registerEnergyHooks, addBonusEnergy, setEnergyDirect, getEnergy, isReady } from "./energy.js";
 import { registerEnergyHUD } from "./energy-hud.js";
 import { ensurePrimordialItems } from "./items.js";
+import { registerTokenImageHooks } from "./attacks/base.js";
 import { registerPrimordialChaos } from "./attacks/primordial-chaos.js";
 import { registerPrimordialRage } from "./attacks/primordial-rage.js";
 import { registerPrimordialEclipse } from "./attacks/primordial-eclipse.js";
@@ -15,6 +16,9 @@ export function registerPrimordial() {
 
   // Energy System (passive charge + decay hooks)
   registerEnergyHooks();
+
+  // Token Image Restore Hook
+  registerTokenImageHooks();
 
   // Energy HUD (visuelles Icon pro Spieler)
   registerEnergyHUD();

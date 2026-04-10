@@ -1,4 +1,4 @@
-import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
+import { registerPrimordialAttack, rollDamage, applyDamageToTargets, setTokenImg, applyVisualEffect } from "./base.js";
 import { applyTempHpViaSocket } from "../../../utils/socket.js";
 
 /**
@@ -11,6 +11,7 @@ import { applyTempHpViaSocket } from "../../../utils/socket.js";
 const SPELL_NAME = "Primordial Chaos";
 const BASE_DAMAGE = "4d10";
 const TEMP_HP_FORMULA = "2d6 + @abilities.wis.mod";
+const PRIMORDIAL_IMG = "assets/CharacterPortraits/CinematicPortraits/Remiel_PrimordialChaos.png";
 
 const CUT_IN_CONFIG = {
   groupId: "",
@@ -89,6 +90,10 @@ export function registerPrimordialChaos() {
     for (const t of allies) {
       await applyTempHpViaSocket(t.actor, tempHp);
     }
+
+    // Token-Icon für 1 Runde auf Primordial-Bild setzen
+    await setTokenImg(actor, PRIMORDIAL_IMG);
+    await applyVisualEffect(actor, item, 1);
 
     await ChatMessage.create({
       content: `<div style="text-align:center; padding:8px; border: 1px solid #666; border-radius:4px; background: linear-gradient(135deg, #1a1a2e, #16213e);">

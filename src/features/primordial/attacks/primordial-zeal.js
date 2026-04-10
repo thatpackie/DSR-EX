@@ -1,4 +1,4 @@
-import { registerPrimordialAttack, rollDamage, applyDamageToTargets } from "./base.js";
+import { registerPrimordialAttack, rollDamage, applyDamageToTargets, setTokenImg } from "./base.js";
 import { applyEffectViaSocket, applyTempHpViaSocket } from "../../../utils/socket.js";
 
 /**
@@ -16,6 +16,7 @@ const DAMAGE_FORMULA = "5d8";
 const TEMP_HP_ALLIES = "1d8 + @abilities.cha.mod";
 const BUFF_AC = 2;
 const BUFF_DURATION = 60;
+const PRIMORDIAL_IMG = "assets/CharacterPortraits/CinematicPortraits/Elantir_PrimordialZeal.png";
 
 const CUT_IN_CONFIG = {
   groupId: "",
@@ -95,11 +96,15 @@ export function registerPrimordialZeal() {
       img: item.img ?? "icons/magic/holy/barrier-shield-winged-cross.webp",
       origin: item.uuid,
       duration: { seconds: BUFF_DURATION, startTime: game.time.worldTime },
-      flags: { "DSR-EX": { primordialZealBuff: true } },
+      // restoreTokenImg: true — stellt Elantirs Token-Bild nach 60s wieder her
+      flags: { "DSR-EX": { primordialZealBuff: true, restoreTokenImg: true } },
       changes: [
         { key: "system.attributes.ac.bonus", mode: 2, value: String(BUFF_AC), priority: 20 }
       ]
     };
+
+    // Token-Icon für die Dauer des Buffs (60s) auf Primordial-Bild setzen
+    await setTokenImg(actor, PRIMORDIAL_IMG);
 
     // Buff + Temp HP auf alle Verbündeten (inkl. Caster selbst)
     const buffTargets = allies.length > 0 ? allies.map(t => t.actor) : [actor];
