@@ -1,5 +1,6 @@
 import { registerDsrExSettings } from "./settings.js";
 import { registerPrimordial } from "./features/primordial/index.js";
+import { registerExcessive } from "./features/excessive/index.js";
 import { registerSocket } from "./utils/socket.js";
 
 const MODULE_ID = "DSR-EX";
@@ -14,4 +15,5 @@ Hooks.once("ready", () => {
   console.log(`${MODULE_ID} | ready`);
   registerSocket();
   registerPrimordial();
+  registerExcessive();
 });
