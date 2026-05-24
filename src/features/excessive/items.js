@@ -71,8 +71,15 @@ export async function ensureExcessiveItems() {
   });
 
   if (game.settings.get(MODULE_ID, SETTING_KEY)) {
-    console.log("DSR-EX | Excessive Items bereits erstellt, überspringe.");
-    return;
+    // Flag gesetzt — aber trotzdem prüfen ob Items wirklich da sind
+    const allExist = EXCESSIVE_ITEMS.every(def => game.items.find(i => i.name === def.name));
+    if (allExist) {
+      console.log("DSR-EX | Excessive Items bereits erstellt, überspringe.");
+      return;
+    }
+    // Items fehlen trotz gesetztem Flag — Setup erneut durchführen
+    console.log("DSR-EX | Excessive Items fehlen trotz Setup-Flag — erstelle neu.");
+    await game.settings.set(MODULE_ID, SETTING_KEY, false);
   }
 
   console.log("DSR-EX | Erstelle Excessive Attack Items...");

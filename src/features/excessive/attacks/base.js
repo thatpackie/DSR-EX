@@ -70,9 +70,14 @@ export function registerExcessiveAttack(config, executeAttack) {
  * @param {string} flavor   - Chat-Beschriftung
  */
 export async function rollWisSave(targetActor, dc, flavor = "WIS Saving Throw") {
-  const wisBonus = targetActor.system?.abilities?.wis?.save ?? 0;
+  // getRollData() gibt garantiert flache Numbers — verhindert [object Object] in der Formel
+  const rollData = targetActor.getRollData?.() ?? {};
+  const wisBonus = Number(rollData.abilities?.wis?.save ?? 0);
+  const safeBonus = Number.isFinite(wisBonus) ? wisBonus : 0;
+  const sign = safeBonus >= 0 ? "+" : "-";
+  const formula = `1d20 ${sign} ${Math.abs(safeBonus)}`;
 
-  const roll = await new Roll(`1d20 + ${wisBonus}`).evaluate();
+  const roll = await new Roll(formula).evaluate();
   const success = roll.total >= dc;
 
   // ChatMessage.create mit rolls[] ist der zuverlässige Weg in Foundry v13
