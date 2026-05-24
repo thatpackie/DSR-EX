@@ -18,6 +18,7 @@ const CUT_IN_CONFIG = {
   theme: "slash",
   customDuration: 5,
   hideBackground: false,
+  localOnly: false,
   screenPosX: 50,
   screenPos: 50,
   charScale: 1.5,

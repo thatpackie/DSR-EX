@@ -27,17 +27,9 @@ export function registerPrimordialAttack(config, executeAttack) {
       if (!item || !actor) return;
       if ((item.name ?? "").trim() !== spellName) return;
 
-      // Genau ein Client verarbeitet den Hook:
-      // Wenn ein aktiver, nicht-GM Spieler diesem Actor zugewiesen ist — nur dieser Spieler.
-      // Sonst: nur der GM (z.B. bei NPCs oder wenn Spieler offline ist).
-      const assignedPlayer = game.users.find(
-        u => !u.isGM && u.active && u.character?.id === actor.id
-      );
-      if (assignedPlayer) {
-        if (game.user.id !== assignedPlayer.id) return;
-      } else {
-        if (!game.user.isGM) return;
-      }
+      // Immer GM-only — verhindert Race Conditions und Template-Permission-Probleme.
+      // Alle Writes gehen per Socket, Cut-Ins mit localOnly:false broadcasten an alle.
+      if (!game.user.isGM) return;
 
       // Energy Check
       if (!isReady(actor)) {

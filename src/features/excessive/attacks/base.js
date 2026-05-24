@@ -70,20 +70,21 @@ export function registerExcessiveAttack(config, executeAttack) {
  * @param {string} flavor   - Chat-Beschriftung
  */
 export async function rollWisSave(targetActor, dc, flavor = "WIS Saving Throw") {
-  const rollData = targetActor.getRollData?.() ?? {};
   const wisBonus = targetActor.system?.abilities?.wis?.save ?? 0;
-  const profBonus = targetActor.system?.attributes?.prof ?? 0;
 
-  // dnd5e speichert den fertigen Save-Bonus in abilities.wis.save (inkl. Prof)
-  const roll = await new Roll(`1d20 + ${wisBonus}`, rollData).evaluate();
+  const roll = await new Roll(`1d20 + ${wisBonus}`).evaluate();
   const success = roll.total >= dc;
 
-  await roll.toMessage({
+  // ChatMessage.create mit rolls[] ist der zuverlässige Weg in Foundry v13
+  await ChatMessage.create({
+    rolls: [roll],
     speaker: ChatMessage.getSpeaker({ actor: targetActor }),
     flavor: `${flavor} (DC ${dc}) — ${success ? "✅ Erfolg" : "❌ Misserfolg"}`,
+    rollMode: CONST.DICE_ROLL_MODES.PUBLIC,
     flags: { "DSR-EX": { saveRoll: true, dc, success } }
   });
 
+  console.log(`DSR-EX | ${targetActor.name} WIS Save: ${roll.total} vs DC ${dc} — ${success ? "Erfolg" : "Fail"}`);
   return { roll, success };
 }
 
