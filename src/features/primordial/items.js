@@ -147,7 +147,7 @@ const PRIMORDIAL_ITEMS = [
       rangeUnits: "ft",
       rangeValue: "30",
       templateType: "cone",
-      templateSize: "30",   // Länge der Cone in ft
+      templateSize: "30",
       targetType: "any"
     },
     flags: { "DSR-EX": { isPrimordialAttack: true, character: "Pyraxis" } }
@@ -251,11 +251,83 @@ const PRIMORDIAL_ITEMS = [
       chatFlavor: "Primordial Vengeance — Time to reap.",
       rangeUnits: "ft",
       rangeValue: "60",
-      // Kein Template — Einzelziel
       targetType: "creature",
       targetCount: "1"
     },
     flags: { "DSR-EX": { isPrimordialAttack: true, character: "Vaelorin" } }
+  }
+];
+
+const MEGALOMANIA_ITEMS = [
+  {
+    name: "Megalomania: Strike",
+    type: "feat",
+    img: "icons/magic/control/debuff-chains-ropes-red.webp",
+    system: {
+      description: {
+        value: `<p><strong>Megalomania: Strike</strong> — Felix (Abaddon)</p>
+<p><em>"No Mercy."</em></p>
+<p>Die Mal laden den Ring auf. Ein einzelner Orbitalstrahl. Beshabas Pech — für den Feind.</p>
+<ul>
+<li><strong>Ziel ≤ 25% HP:</strong> Instakill</li>
+<li><strong>Ziel &gt; 25% HP:</strong> 8d10 Force Schaden</li>
+</ul>
+<p><em>Verfügbar wenn mindestens eine Primordial der Party in diesem Kampf aktiviert wurde.</em></p>
+<p style="color:#888;"><em>Bang.</em></p>`,
+        chat: ""
+      },
+      activation: { type: "action", condition: "" },
+      duration: { units: "inst" },
+      range: { units: "ft", value: "60", special: "" },
+      target: {
+        template: { contiguous: false, units: "ft", type: "" },
+        affects: { choice: false, type: "creature", count: "1", special: "" }
+      },
+      uses: { spent: 0, recovery: [], max: "" }
+    },
+    activityOverrides: {
+      chatFlavor: "Megalomania: Strike — Bang.",
+      rangeUnits: "ft",
+      rangeValue: "60",
+      targetType: "creature",
+      targetCount: "1"
+    },
+    flags: { "DSR-EX": { isMegalomania: true, character: "Felix" } }
+  },
+  {
+    name: "Megalomania: Fusillade",
+    type: "feat",
+    img: "icons/magic/control/debuff-chains-ropes-pink.webp",
+    system: {
+      description: {
+        value: `<p><strong>Megalomania: Fusillade</strong> — Felicia (Abaddon)</p>
+<p><em>"Who's next?"</em></p>
+<p>Die Pip schießen alle auf einmal. Felicia schießt zuletzt. Tymoras Segen — ebenfalls für den Feind.</p>
+<ul>
+<li><strong>Ziel ≤ 25% HP:</strong> Instakill</li>
+<li><strong>Ziel &gt; 25% HP:</strong> 8d10 Force Schaden</li>
+</ul>
+<p><em>Verfügbar wenn mindestens eine Primordial der Party in diesem Kampf aktiviert wurde.</em></p>
+<p style="color:#888;"><em>Bäm.</em></p>`,
+        chat: ""
+      },
+      activation: { type: "action", condition: "" },
+      duration: { units: "inst" },
+      range: { units: "ft", value: "60", special: "" },
+      target: {
+        template: { contiguous: false, units: "ft", type: "" },
+        affects: { choice: false, type: "creature", count: "1", special: "" }
+      },
+      uses: { spent: 0, recovery: [], max: "" }
+    },
+    activityOverrides: {
+      chatFlavor: "Megalomania: Fusillade — Bäm.",
+      rangeUnits: "ft",
+      rangeValue: "60",
+      targetType: "creature",
+      targetCount: "1"
+    },
+    flags: { "DSR-EX": { isMegalomania: true, character: "Felicia" } }
   }
 ];
 
@@ -279,33 +351,67 @@ export async function ensurePrimordialItems() {
     }
 
     try {
-      // Activity generieren und ins system.activities einsetzen
       const activity = buildUtilityActivity(def.activityOverrides ?? {});
       const itemData = {
         name: def.name,
         type: def.type,
         img: def.img,
-        system: {
-          ...def.system,
-          activities: activity
-        },
+        system: { ...def.system, activities: activity },
         flags: def.flags
       };
-
       await Item.create(itemData);
-      console.log(`DSR-EX | Item "${def.name}" erstellt mit Activity.`);
+      console.log(`DSR-EX | Item "${def.name}" erstellt.`);
       created++;
     } catch (err) {
       console.error(`DSR-EX | Fehler beim Erstellen von "${def.name}":`, err);
     }
   }
 
-  // itemSetupComplete wird erst gesetzt wenn alles durchgelaufen ist
   await game.settings.set(MODULE_ID, "itemSetupComplete", true);
+  if (created > 0) ui.notifications.info(`DSR-EX | ${created} Primordial Item(s) erstellt.`);
+  console.log("DSR-EX | Primordial Item-Setup abgeschlossen.");
+}
 
-  if (created > 0) {
-    ui.notifications.info(`DSR-EX | ${created} Primordial Attack Item(s) erstellt.`);
+/**
+ * Erstellt die Megalomania Items (Felix & Felicia / Abaddon).
+ * Eigenes Setup-Flag — unabhängig von itemSetupComplete.
+ *
+ * Reset: game.settings.set("DSR-EX", "megalomaniaItemSetupComplete", false) + F5
+ */
+export async function ensureMegalomaniaItems() {
+  if (!game.user.isGM) return;
+
+  const setupDone = game.settings.get(MODULE_ID, "megalomaniaItemSetupComplete");
+  if (setupDone) return;
+
+  console.log("DSR-EX | Erstelle Megalomania Items...");
+
+  let created = 0;
+  for (const def of MEGALOMANIA_ITEMS) {
+    const existing = game.items.find(i => i.name === def.name);
+    if (existing) {
+      console.log(`DSR-EX | Item "${def.name}" existiert bereits, überspringe.`);
+      continue;
+    }
+
+    try {
+      const activity = buildUtilityActivity(def.activityOverrides ?? {});
+      const itemData = {
+        name: def.name,
+        type: def.type,
+        img: def.img,
+        system: { ...def.system, activities: activity },
+        flags: def.flags
+      };
+      await Item.create(itemData);
+      console.log(`DSR-EX | Item "${def.name}" erstellt.`);
+      created++;
+    } catch (err) {
+      console.error(`DSR-EX | Fehler beim Erstellen von "${def.name}":`, err);
+    }
   }
 
-  console.log("DSR-EX | Item-Setup abgeschlossen.");
+  await game.settings.set(MODULE_ID, "megalomaniaItemSetupComplete", true);
+  if (created > 0) ui.notifications.info(`DSR-EX | ${created} Megalomania Item(s) erstellt.`);
+  console.log("DSR-EX | Megalomania Item-Setup abgeschlossen.");
 }

@@ -32,6 +32,10 @@ export async function consumeEnergy(actor) {
   if (!isReady(actor)) return false;
   await setEnergy(actor, 0);
   await whisperToGM(`DSR-EX | ${actor.name}: Primordial Energy verbraucht (100 → 0)`);
+  // Megalomania für diesen Kampf freischalten
+  if (game.combat) {
+    await game.combat.setFlag("DSR-EX", "megalomaniaUnlocked", true);
+  }
   return true;
 }
 
@@ -86,24 +90,6 @@ export async function setEnergyDirect(actor, value) {
   return newValue;
 }
 
-// ─── Decay ──────────────────────────────────────────────────────────────────
-
-async function applyDecay(combat) {
-  const amount = game.settings.get(MODULE_ID, "decayAfterCombat");
-  if (amount <= 0) return;
-
-  for (const combatant of combat.combatants) {
-    const actor = combatant.actor;
-    if (!actor || actor.type !== "character") continue;
-
-    const current = getEnergy(actor);
-    if (current <= 0) continue;
-
-    const newValue = await setEnergy(actor, current - amount);
-    await whisperToGM(`DSR-EX | ${actor.name}: Decay -${amount} → ${newValue}/${game.settings.get(MODULE_ID, "maxEnergy")}`);
-  }
-}
-
 // ─── Notifications ──────────────────────────────────────────────────────────
 
 async function notifyEnergyFull(actor) {
@@ -123,21 +109,16 @@ export function registerEnergyHooks() {
     if (!game.user.isGM) return;
     if (!game.settings.get(MODULE_ID, "primordialEnabled")) return;
 
-    // Prüfe ob sich die Runde geändert hat
-    // update.round existiert NUR wenn sich die Runde tatsächlich geändert hat
     if (update.round === undefined) return;
 
     const newRound = update.round;
 
-    // Runde 0→1 ist Kampfbeginn, ab Runde 2+ ist es ein Rundenwechsel
-    // Wir chargen ab Runde 2 (= nach der ersten vollen Runde)
     if (newRound <= 1) {
       lastKnownRound = newRound;
       console.log(`DSR-EX | Kampf gestartet (Runde ${newRound}) — noch kein Charge`);
       return;
     }
 
-    // Nur chargen wenn die Runde vorwärts ging (nicht bei Rückwärts-Korrektur)
     if (newRound <= lastKnownRound) {
       lastKnownRound = newRound;
       return;
@@ -154,14 +135,13 @@ export function registerEnergyHooks() {
     console.log("DSR-EX | Neuer Kampf — Round-Tracker zurückgesetzt");
   });
 
-  // Decay bei Kampfende
+  // Kampfende — kein Decay mehr
   Hooks.on("deleteCombat", async (combat, options, userId) => {
     if (!game.user.isGM) return;
     if (!game.settings.get(MODULE_ID, "primordialEnabled")) return;
 
     lastKnownRound = 0;
-    console.log("DSR-EX | Kampf beendet — Decay wird angewendet");
-    await applyDecay(combat);
+    console.log("DSR-EX | Kampf beendet — kein Decay (deaktiviert)");
   });
 
   console.log("DSR-EX | Energy Hooks registriert");

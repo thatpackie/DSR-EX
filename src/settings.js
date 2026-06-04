@@ -46,8 +46,16 @@ export function registerDsrExSettings() {
     default: true
   });
 
-  // Internes Flag: Item-Setup bereits gelaufen?
+  // Internes Flag: Primordial Item-Setup bereits gelaufen?
   game.settings.register(MODULE_ID, "itemSetupComplete", {
+    scope: "world",
+    config: false,
+    type: Boolean,
+    default: false
+  });
+
+  // Internes Flag: Megalomania Item-Setup bereits gelaufen?
+  game.settings.register(MODULE_ID, "megalomaniaItemSetupComplete", {
     scope: "world",
     config: false,
     type: Boolean,
